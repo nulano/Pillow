@@ -52,9 +52,9 @@ def grab(bbox=None, include_layered_windows=False, multimonitor=False):
             -1,
         )
         if bbox:
-            xo, yo = offset
+            x0, y0 = offset
             left, top, right, bottom = bbox
-            im = im.crop((left - xo, top - yo, right - xo, bottom - yo))
+            im = im.crop((left - x0, top - y0, right - x0, bottom - y0))
     return im
 
 
