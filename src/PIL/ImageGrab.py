@@ -37,8 +37,6 @@ def grab(bbox=None, include_layered_windows=False, multimonitor=False):
         im = Image.open(filepath)
         im.load()
         os.unlink(filepath)
-        if bbox:
-            im = im.crop(bbox)
     else:
         offset, size, data = grabber(include_layered_windows, multimonitor)
         im = Image.frombytes(
@@ -51,10 +49,13 @@ def grab(bbox=None, include_layered_windows=False, multimonitor=False):
             (size[0] * 3 + 3) & -4,
             -1,
         )
-        if bbox:
-            x0, y0 = offset
-            left, top, right, bottom = bbox
-            im = im.crop((left - x0, top - y0, right - x0, bottom - y0))
+        x0, y0 = offset
+        if x0 != 0 or y0 != 0:
+            if not bbox:
+                bbox = (0, 0, im.width, im.height)
+            bbox = (bbox[0] - x0, bbox[1] - y0, bbox[2] - x0, bbox[3] - y0)
+    if bbox:
+        im = im.crop(bbox)
     return im
 
 
