@@ -359,7 +359,7 @@ PyImaging_GrabScreenWin32(PyObject* self, PyObject* args)
     height = GetDeviceCaps(screen, VERTRES);
 
     if (SetThreadDpiAwarenessContext_function != NULL) {
-        dpiAwareness = SetThreadDpiAwarenessContext_function(dpiAwareness);
+        SetThreadDpiAwarenessContext_function(dpiAwareness);
     }
 
     FreeLibrary(user32);
