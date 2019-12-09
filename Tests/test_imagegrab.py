@@ -42,9 +42,6 @@ class TestImageGrab(PillowTestCase):
         self.assertIsInstance(exception, IOError)
         self.assertTrue(str(exception).startswith("X connection failed"))
 
-    @unittest.skipUnless(
-        sys.platform in ("win32", "darwin"), "requires Windows or macOS"
-    )
     def test_grabclipboard(self):
         if sys.platform == "darwin":
             subprocess.call(["screencapture", "-cx"])
@@ -58,7 +55,17 @@ $bmp = New-Object Drawing.Bitmap 200, 200
             )
             p.communicate()
         else:
-            self.skipTest("ImageGrab.grabclipboard() is macOS and Windows only")
+            exception = None
+
+            try:
+                ImageGrab.grabclipboard()
+            except IOError as e:
+                exception = e
+
+            self.assertIsInstance(exception, IOError)
+            self.assertEqual(
+                str(exception), "ImageGrab.grabclipboard() is macOS and Windows only"
+            )
             return
 
         im = ImageGrab.grabclipboard()
