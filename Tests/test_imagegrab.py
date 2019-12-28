@@ -30,6 +30,17 @@ class TestImageGrab(PillowTestCase):
         except IOError as e:
             self.skipTest(str(e))
 
+    @unittest.skipIf(Image.core.HAVE_XCB, "tests missing XCB")
+    def test_grab_no_xcb(self):
+        if sys.platform not in ("win32", "darwin"):
+            with self.assertRaises(IOError) as e:
+                ImageGrab.grab()
+            self.assertTrue(str(e.exception).startswith("Pillow was built without XCB support"))
+
+        with self.assertRaises(IOError) as e:
+            ImageGrab.grab(xdisplay="")
+        self.assertTrue(str(e.exception).startswith("Pillow was built without XCB support"))
+
     @unittest.skipUnless(Image.core.HAVE_XCB, "requires XCB")
     def test_grab_invalid_xdisplay(self):
         with self.assertRaises(IOError) as e:
