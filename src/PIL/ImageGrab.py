@@ -99,4 +99,4 @@ def grabclipboard():
             return BmpImagePlugin.DibImageFile(io.BytesIO(data))
         return data
     else:
-        raise IOError("ImageGrab.grabclipboard() is macOS and Windows only")
+        raise NotImplementedError("ImageGrab.grabclipboard() is macOS and Windows only")
