@@ -32,15 +32,9 @@ class TestImageGrab(PillowTestCase):
 
     @unittest.skipUnless(Image.core.HAVE_XCB, "requires XCB")
     def test_grab_invalid_xdisplay(self):
-        exception = None
-
-        try:
+        with self.assertRaises(IOError) as e:
             ImageGrab.grab(xdisplay="error.test:0.0")
-        except Exception as e:
-            exception = e
-
-        self.assertIsInstance(exception, IOError)
-        self.assertTrue(str(exception).startswith("X connection failed"))
+        self.assertTrue(str(e.exception).startswith("X connection failed"))
 
     def test_grabclipboard(self):
         if sys.platform == "darwin":
@@ -55,16 +49,10 @@ $bmp = New-Object Drawing.Bitmap 200, 200
             )
             p.communicate()
         else:
-            exception = None
-
-            try:
+            with self.assertRaises(NotImplementedError) as e:
                 ImageGrab.grabclipboard()
-            except IOError as e:
-                exception = e
-
-            self.assertIsInstance(exception, IOError)
             self.assertEqual(
-                str(exception), "ImageGrab.grabclipboard() is macOS and Windows only"
+                str(e.exception), "ImageGrab.grabclipboard() is macOS and Windows only"
             )
             return
 
