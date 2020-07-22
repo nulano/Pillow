@@ -391,6 +391,9 @@ def test_anchor_invalid_ttb():
             ValueError, lambda: font.getmask2("hello", anchor=anchor, direction="ttb")
         )
         pytest.raises(
+            ValueError, lambda: font.getbbox("hello", anchor=anchor, direction="ttb")
+        )
+        pytest.raises(
             ValueError, lambda: d.text((0, 0), "hello", anchor=anchor, direction="ttb")
         )
         pytest.raises(

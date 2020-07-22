@@ -874,6 +874,7 @@ class TestImageFont:
 
         for anchor in ["", "l", "a", "lax", "sa", "xa", "lx"]:
             pytest.raises(ValueError, lambda: font.getmask2("hello", anchor=anchor))
+            pytest.raises(ValueError, lambda: font.getbbox("hello", anchor=anchor))
             pytest.raises(ValueError, lambda: d.text((0, 0), "hello", anchor=anchor))
             pytest.raises(
                 ValueError, lambda: d.multiline_text((0, 0), "foo\nbar", anchor=anchor)
