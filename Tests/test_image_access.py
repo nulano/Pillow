@@ -329,33 +329,53 @@ class TestCffi(AccessTest):
 
 
 class TestImagePutPixelError(AccessTest):
-    def test_putpixel_error_message(self):
-        for mode, reason, accept_tuple in [
-            ("L", "color must be int or tuple", True),
-            ("LA", "color must be int or tuple", True),
-            ("RGB", "color must be int or tuple", True),
-            ("RGBA", "color must be int or tuple", True),
-            ("I", "color must be int", False),
-            ("I;16", "color must be int", False),
-            ("BGR;15", "color must be int", False),
-        ]:
-            im = hopper(mode)
+    @pytest.mark.parametrize(
+        ("mode", "reason"),
+        [
+            ("L", "color must be int or tuple"),
+            ("LA", "color must be int or tuple"),
+            ("RGB", "color must be int or tuple"),
+            ("RGBA", "color must be int or tuple"),
+            ("I", "color must be int"),
+            ("I;16", "color must be int"),
+            ("BGR;15", "color must be int"),
+        ],
+    )
+    def test_putpixel_type_error1(self, mode, reason):
+        im = hopper(mode)
 
-            for v in ["foo", 1.0, None]:
-                with pytest.raises(TypeError, match=reason):
-                    im.putpixel((0, 0), v)
+        for value in ["foo", 1.0, None]:
+            with pytest.raises(TypeError, match=reason):
+                im.putpixel((0, 0), value)
 
-            if not accept_tuple:
-                with pytest.raises(TypeError, match=reason):
-                    im.putpixel((0, 0), (10,))
+    @pytest.mark.parametrize(
+        ("mode", "reason"),
+        [
+            ("I", "color must be int"),
+            ("I;16", "color must be int"),
+            ("BGR;15", "color must be int"),
+        ],
+    )
+    def test_putpixel_type_error2(self, mode, reason):
+        im = hopper(mode)
 
-            with pytest.raises(OverflowError):
-                im.putpixel((0, 0), 2 ** 80)
+        with pytest.raises(TypeError, match=reason):
+            im.putpixel((0, 0), (10,))
 
-        for mode in ["BGR;15"]:
-            im = hopper(mode)
-            with pytest.raises(ValueError, match="unrecognized image mode"):
-                im.putpixel((0, 0), 0)
+    @pytest.mark.parametrize(
+        "mode", ["L", "LA", "RGB", "RGBA", "I", "I;16", "BGR;15"],
+    )
+    def test_putpixel_overflow_error(self, mode):
+        im = hopper(mode)
+
+        with pytest.raises(OverflowError):
+            im.putpixel((0, 0), 2 ** 80)
+
+    def test_putpixel_value_error(self):
+        im = hopper("BGR;15")
+
+        with pytest.raises(ValueError, match="unrecognized image mode"):
+            im.putpixel((0, 0), 0)
 
 
 class TestEmbeddable:
