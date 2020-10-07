@@ -785,7 +785,7 @@ class TestImageFont:
         self._check_text(font, "Tests/images/variation_tiny_axes.png", 32.5)
 
     @pytest.mark.parametrize(
-        "anchor,left,left_raqm,top",
+        "anchor,left,left_old,top",
         (
             # test horizontal anchors
             ("ls", 0, 0, -36),
@@ -798,15 +798,18 @@ class TestImageFont:
             ("mb", -64, -65, -44),
             ("md", -64, -65, -51),
         ),
+        ids=("ls", "ms", "rs", "ma", "mt", "mm", "mb", "md"),
     )
-    def test_anchor(self, anchor, left, left_raqm, top):
+    def test_anchor(self, anchor, left, left_old, top):
         name, text = "quick", "Quick"
         path = f"Tests/images/test_anchor_{name}_{anchor}.png"
-        freetype = parse_version(features.version_module("freetype2"))
 
-        if self.LAYOUT_ENGINE == ImageFont.LAYOUT_RAQM or freetype < parse_version("2.4"):
+        freetype = parse_version(features.version_module("freetype2"))
+        if freetype < parse_version("2.4"):
             width, height = (129, 44)
-            left = left_raqm
+            left = left_old
+        elif self.LAYOUT_ENGINE == ImageFont.LAYOUT_RAQM:
+            width, height = (129, 44)
         else:
             width, height = (128, 44)
 
