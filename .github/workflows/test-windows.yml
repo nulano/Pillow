@@ -32,7 +32,8 @@ jobs:
     - name: Checkout cached dependencies
       uses: actions/checkout@v2
       with:
-        repository: python-pillow/pillow-depends
+        repository: nulano/pillow-depends
+        ref: jp2
         path: winbuild\depends
 
     - name: Cache pip

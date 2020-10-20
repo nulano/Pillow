@@ -10,6 +10,6 @@ svn_export()
         echo ""
     fi
 
-    svn export --force https://github.com/python-pillow/pillow-depends/trunk/test_images ../Tests/images
+    svn export --force https://github.com/nulano/pillow-depends/branches/jp2/test_images ../Tests/images
 }
 svn_export || svn_export retry || svn_export retry || svn_export retry
