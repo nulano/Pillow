@@ -777,7 +777,7 @@ PyImaging_DrawWmf(PyObject* self, PyObject* args)
     char* ptr;
 
     char* data;
-    Py_ssize_t datasize;
+    int datasize;
     int width, height;
     int x0, y0, x1, y1;
     if (!PyArg_ParseTuple(args, "y#(ii)(iiii):_load", &data, &datasize,
