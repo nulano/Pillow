@@ -1,0 +1,61 @@
+name: Test Architectures
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: "arm64v8/ubuntu:bionic"
+            arch: "aarch64"
+          - image: "ppc64le/ubuntu:bionic"
+            arch: "ppc64le"
+          - image: "s390x/ubuntu:bionic"
+            arch: "s390x"
+    defaults:
+      run:
+        shell: bash -eo pipefail .github/workflows/test-arch.sh {0}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up emulation
+        run: |
+          docker run --rm --privileged aptman/qus -s -- -p ${{ matrix.arch }}
+          docker pull ${{ matrix.image }}
+          docker tag ${{ matrix.image }} container:latest
+        shell: bash
+
+      - name: Install Python
+        run: |
+          echo Running on $(uname -p)
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get -qq install python3 python3-pip python3-tk
+
+      - name: Build system information
+        run: python3 .github/workflows/system-info.py
+
+      - name: Install dependencies
+        run: |
+          apt-get -qq install sudo wget curl subversion git\
+                              libjpeg8-dev zlib1g-dev libtiff5-dev
+          .ci/install.sh
+
+      - name: Build
+        run: .ci/build.sh
+
+      - name: Test
+        run: CI=true .ci/test.sh
+
+      - name: After Success
+        run: .ci/after_success.sh
+
+      - name: Upload coverage
+        run: bash <(curl -s https://codecov.io/bash) -F GHA_Test
+        env:
+          CODECOV_NAME: ${{ matrix.image }}
