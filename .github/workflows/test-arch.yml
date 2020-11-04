@@ -28,7 +28,7 @@ jobs:
           docker run --rm --privileged aptman/qus -s -- -p ${{ matrix.arch }}
           docker pull ${{ matrix.image }}
           docker tag ${{ matrix.image }} container:latest
-          echo "run_in_docker \$1 $(bash <(curl -s https://codecov.io/env)) -e CODECOV_NAME=${{ matrix.image }}" >> .github/workflows/test-arch.sh
+          echo "run_in_docker \$1 $(bash <(curl -s https://codecov.io/env)) -e GITHUB_ACTIONS -e CODECOV_NAME=${{ matrix.image }}" >> .github/workflows/test-arch.sh
           cat .github/workflows/test-arch.sh
         shell: bash
 
