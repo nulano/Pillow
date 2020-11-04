@@ -29,6 +29,7 @@ jobs:
           docker pull ${{ matrix.image }}
           docker tag ${{ matrix.image }} container:latest
           echo "run_in_docker \$1 $(bash <(curl -s https://codecov.io/env)) -e CODECOV_NAME=${{ matrix.image }}" >> .github/workflows/test-arch.sh
+          cat .github/workflows/test-arch.sh
         shell: bash
 
       - name: Install Python
@@ -57,4 +58,6 @@ jobs:
         run: .ci/after_success.sh
 
       - name: Upload coverage
-        run: bash <(curl -s https://codecov.io/bash) -F GHA_Test
+        run: |
+          set
+          bash <(curl -s https://codecov.io/bash) -F GHA_Test
