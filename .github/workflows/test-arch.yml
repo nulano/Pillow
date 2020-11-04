@@ -28,6 +28,7 @@ jobs:
           docker run --rm --privileged aptman/qus -s -- -p ${{ matrix.arch }}
           docker pull ${{ matrix.image }}
           docker tag ${{ matrix.image }} container:latest
+          echo "run_in_docker \$1 $(bash <(curl -s https://codecov.io/env)) -e CODECOV_NAME=${{ matrix.image }}" >> .github/workflows/test-arch.sh
         shell: bash
 
       - name: Install Python
@@ -57,5 +58,3 @@ jobs:
 
       - name: Upload coverage
         run: bash <(curl -s https://codecov.io/bash) -F GHA_Test
-        env:
-          CODECOV_NAME: ${{ matrix.image }}
