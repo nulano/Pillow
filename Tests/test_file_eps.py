@@ -4,7 +4,7 @@ import pytest
 
 from PIL import EpsImagePlugin, Image, features
 
-from .helper import assert_image_similar, hopper, skip_unless_feature
+from .helper import assert_image_similar, hopper, is_ppc64le, skip_unless_feature
 
 HAS_GHOSTSCRIPT = EpsImagePlugin.has_ghostscript()
 
@@ -59,6 +59,7 @@ def test_invalid_file():
         EpsImagePlugin.EpsImageFile(invalid_file)
 
 
+@pytest.mark.xfail(is_ppc64le(), reason="failing on ppc64le on GHA")
 @pytest.mark.skipif(not HAS_GHOSTSCRIPT, reason="Ghostscript not available")
 def test_cmyk():
     with Image.open("Tests/images/pil_sample_cmyk.eps") as cmyk_image:
@@ -75,6 +76,7 @@ def test_cmyk():
                 assert_image_similar(cmyk_image, target, 10)
 
 
+@pytest.mark.xfail(is_ppc64le(), reason="failing on ppc64le on GHA")
 @pytest.mark.skipif(not HAS_GHOSTSCRIPT, reason="Ghostscript not available")
 def test_showpage():
     # See https://github.com/python-pillow/Pillow/issues/2615
@@ -102,6 +104,7 @@ def test_iobase_object(tmp_path):
             image1.save(fh, "EPS")
 
 
+@pytest.mark.xfail(is_ppc64le(), reason="failing on ppc64le on GHA")
 @pytest.mark.skipif(not HAS_GHOSTSCRIPT, reason="Ghostscript not available")
 def test_bytesio_object():
     with open(FILE1, "rb") as f:
@@ -123,6 +126,7 @@ def test_image_mode_not_supported(tmp_path):
         im.save(tmpfile)
 
 
+@pytest.mark.xfail(is_ppc64le(), reason="failing on ppc64le on GHA")
 @pytest.mark.skipif(not HAS_GHOSTSCRIPT, reason="Ghostscript not available")
 @skip_unless_feature("zlib")
 def test_render_scale1():
@@ -145,6 +149,7 @@ def test_render_scale1():
         assert_image_similar(image2_scale1, image2_scale1_compare, 10)
 
 
+@pytest.mark.xfail(is_ppc64le(), reason="failing on ppc64le on GHA")
 @pytest.mark.skipif(not HAS_GHOSTSCRIPT, reason="Ghostscript not available")
 @skip_unless_feature("zlib")
 def test_render_scale2():
