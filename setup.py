@@ -797,15 +797,15 @@ class pil_build_ext(build_ext):
         print("-" * 68)
 
         options = [
-            (feature.jpeg, "JPEG"),
-            (feature.jpeg2000, "OPENJPEG (JPEG2000)", feature.openjpeg_version),
-            (feature.zlib, "ZLIB (PNG/ZIP)"),
-            (feature.imagequant, "LIBIMAGEQUANT"),
-            (feature.tiff, "LIBTIFF"),
             (feature.freetype, "FREETYPE2"),
             (feature.lcms, "LITTLECMS2"),
             (feature.webp, "WEBP"),
             (feature.webpmux, "WEBPMUX"),
+            (feature.jpeg, "JPEG"),
+            (feature.jpeg2000, "OPENJPEG (JPEG2000)", feature.openjpeg_version),
+            (feature.zlib, "ZLIB (PNG/ZIP)"),
+            (feature.tiff, "LIBTIFF"),
+            (feature.imagequant, "LIBIMAGEQUANT"),
             (feature.xcb, "XCB (X protocol)"),
         ]
 
