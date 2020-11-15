@@ -8,7 +8,7 @@ archive=raqm-0.7.0
 
 pushd $archive
 
-./configure --prefix=/usr && make -j4 && sudo make -j4 install
+./configure && make -j4 && sudo make -j4 install
 
 popd
 
