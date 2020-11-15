@@ -21,7 +21,7 @@ if [ "$GHA_PYTHON_VERSION" == "3.8" ]; then python3 -m pip install -U "setuptool
 if [ "$GHA_PYTHON_VERSION" == "3.9" ]; then python3 -m pip install -U "setuptools>=49.3.2" ; fi
 
 # raqm
-pushd depends && ./install_raqm.sh && popd
+pushd depends && ./install_raqm_cmake.sh && popd
 
 # extra test images
 pushd depends && ./install_extra_test_images.sh && popd
