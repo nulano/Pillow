@@ -31,6 +31,9 @@ python3 -m pip install -U pytest
 python3 -m pip install -U pytest-cov
 python3 -m pip install pyroma
 python3 -m pip install test-image-results
+
+# TODO Remove when 3.10-dev includes wheel 0.36.2+
+if [ "$GHA_PYTHON_VERSION" == "3.10-dev" ]; then python3 -m pip install -U "wheel>=0.36.2" ; fi
 python3 -m pip install numpy
 
 # TODO Remove when 3.8 / 3.9 / PyPy3 includes setuptools 49.3.2+:
