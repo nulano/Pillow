@@ -9,16 +9,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [
-          "ubuntu-latest",
           "macOS-latest",
         ]
         python-version: [
-          "pypy-3.7",
-          "pypy-3.6",
-          "3.10-dev",
-          "3.9",
-          "3.8",
-          "3.7",
           "3.6",
         ]
         include:
@@ -29,8 +22,10 @@ jobs:
         # Include new variables for Codecov
         - os: ubuntu-latest
           codecov-flag: GHA_Ubuntu
+          wheel: Pillow-8.1.0.dev0-cp36-cp36m-manylinux1_x86_64.whl
         - os: macOS-latest
           codecov-flag: GHA_macOS
+          wheel: Pillow-8.1.0.dev0-cp36-cp36m-macosx_10_10_x86_64.whl
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} Python ${{ matrix.python-version }}
@@ -74,9 +69,9 @@ jobs:
       env:
         GHA_PYTHON_VERSION: ${{ matrix.python-version }}
 
-    - name: Build
+    - name: Install Wheel
       run: |
-        .ci/build.sh
+        python3 -m install ${{ matrix.wheel }}
 
     - name: Test
       run: |
