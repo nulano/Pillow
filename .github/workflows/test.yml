@@ -67,7 +67,7 @@ jobs:
 
     - name: Install Wheel
       run: |
-        python3 -m install ${{ matrix.wheel }}
+        python3 -m pip install ${{ matrix.wheel }}
 
     - name: Test
       run: |
