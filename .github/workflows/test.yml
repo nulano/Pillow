@@ -17,6 +17,7 @@ jobs:
           - "5.2.0"  # FreeType 2.9.1
           - "7.1.2"  # FreeType 2.10.1
           - "8.0.1"  # FreeType 2.10.4
+          - "Pillow-8.1.0.dev0-cp36-cp36m-manylinux1_x86_64.whl"  # PR 5062
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} Pillow ${{ matrix.pillow }}
