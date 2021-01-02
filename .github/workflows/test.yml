@@ -64,7 +64,7 @@ jobs:
         print()
 
         try:
-          for x in range(5):
+          for x in range(50000):
             print("round", x+1)
             sys.stdout.flush()
             print("mask size:", ImageFont.truetype("Tests/fonts/FreeMono.ttf", 24, layout_engine=1).getmask("test").size)
