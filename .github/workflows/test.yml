@@ -40,8 +40,14 @@ jobs:
         GHA_PYTHON_VERSION: 3.6
 
     - name: Install Pillow ${{ matrix.pillow }}
+      if: "matrix.pillow != 'Pillow-8.1.0.dev0-cp36-cp36m-manylinux1_x86_64.whl'"
       run: |
         python3 -m pip install Pillow==${{ matrix.pillow }}
+
+    - name: Install Pillow ${{ matrix.pillow }}
+      if: "matrix.pillow == 'Pillow-8.1.0.dev0-cp36-cp36m-manylinux1_x86_64.whl'"
+      run: |
+        python3 -m pip install ${{ matrix.pillow }}
 
     - name: Test
       run: |
