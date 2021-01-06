@@ -1,0 +1,52 @@
+name: Test Architectures
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: ${{ matrix.python }} on Arm64
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: [ "3.6" ]
+    defaults:
+      run:
+        shell: bash -eo pipefail .github/workflows/test-arch.sh {0}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up emulation
+        run: |
+          docker run --rm --privileged aptman/qus -s -- -p aarch64
+          docker pull arm64v8/ubuntu:bionic
+          docker tag arm64v8/ubuntu:bionic container:latest
+          echo "run_in_docker \$1 $(bash <(curl -s https://codecov.io/env)) -e GITHUB_ACTIONS -e CODECOV_NAME=arm64v8/ubuntu:bionic" >> .github/workflows/test-arch.sh
+          cat .github/workflows/test-arch.sh
+        shell: bash
+
+      - name: Install Python
+        run: |
+          echo Running on $(uname -p)
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get -qq install python3 python3-pip python3-tk
+
+      - name: Build system information
+        run: python3 .github/workflows/system-info.py
+
+      - name: Install Wheel
+        run: |
+          python3 -m pip install https://github.com/python-pillow/pillow-wheels/releases/download/untagged-16ee6820e47366c4ca5b/Pillow-8.1.0-cp36-cp36m-manylinux2014_aarch64.whl
+
+      - name: Test
+        run: CI=true .ci/test.sh
+
+      - name: After Success
+        run: .ci/after_success.sh
+
+      - name: Upload coverage
+        run: |
+          set
+          bash <(curl -s https://codecov.io/bash) -F GHA_Test
