@@ -44,12 +44,4 @@ jobs:
           python3 -m pip install pytest
 
       - name: Test
-        run: CI=true python3 -bb -m pytest -v -x -W always --cov PIL --cov Tests --cov-report term Tests
-
-      - name: After Success
-        run: .ci/after_success.sh
-
-      - name: Upload coverage
-        run: |
-          set
-          bash <(curl -s https://codecov.io/bash) -F GHA_Test
+        run: CI=true python3 -bb -m pytest -v -x -W always Tests
