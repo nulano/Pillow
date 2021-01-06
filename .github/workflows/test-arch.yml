@@ -44,4 +44,4 @@ jobs:
           python3 -m pip install pytest
 
       - name: Test
-        run: CI=true python3 -bb -m pytest -v -x -W always Tests
+        run: CI=true python3 -bb -m pytest -v -W always Tests
