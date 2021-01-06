@@ -38,7 +38,9 @@ jobs:
 
       - name: Install Wheel
         run: |
-          python3 -m pip install https://github.com/python-pillow/pillow-wheels/releases/download/untagged-16ee6820e47366c4ca5b/Pillow-8.1.0-cp36-cp36m-manylinux2014_aarch64.whl
+          python3 -m pip install -vvv -U pip
+          python3 -m pip install -vvv -U wheel
+          python3 -m pip install -vvv https://github.com/python-pillow/pillow-wheels/releases/download/untagged-16ee6820e47366c4ca5b/Pillow-8.1.0-cp36-cp36m-manylinux2014_aarch64.whl
 
       - name: Test
         run: CI=true .ci/test.sh
