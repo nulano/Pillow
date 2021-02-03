@@ -211,7 +211,6 @@ jobs:
 
   msys:
     runs-on: windows-2019
-
     strategy:
       fail-fast: false
       matrix:
@@ -223,7 +222,6 @@ jobs:
           - mingw: "MINGW64"
             name: "MSYS2 MinGW 64-bit"
             package: "mingw-w64-x86_64"
-
     defaults:
       run:
         shell: bash.exe --login -eo pipefail "{0}"
