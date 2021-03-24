@@ -93,10 +93,10 @@ fribidi_tab(brackets-type unidata/BidiBrackets.txt)
 file(GLOB FRIBIDI_SOURCES lib/*.c)
 file(GLOB FRIBIDI_HEADERS lib/*.h)
 
-add_library(fribidi SHARED
+add_library(fribidi STATIC
 	${FRIBIDI_SOURCES}
 	${FRIBIDI_HEADERS}
 	${FRIBIDI_SOURCES_GENERATED})
 fribidi_definitions(fribidi)
 target_compile_definitions(fribidi
-	PUBLIC "-DFRIBIDI_BUILD")
+	PUBLIC -DFRIBIDI_LIB_STATIC)
