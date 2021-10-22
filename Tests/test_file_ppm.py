@@ -1,8 +1,16 @@
+import sys
+from io import BytesIO
+
 import pytest
 
 from PIL import Image
 
-from .helper import assert_image_equal_tofile, assert_image_similar, hopper
+from .helper import (
+    assert_image_equal,
+    assert_image_equal_tofile,
+    assert_image_similar,
+    hopper,
+)
 
 # sample ppm stream
 TEST_FILE = "Tests/images/hopper.ppm"
@@ -80,3 +88,25 @@ def test_mimetypes(tmp_path):
         f.write("PyCMYK\n128 128\n255")
     with Image.open(path) as im:
         assert im.get_format_mimetype() == "image/x-portable-anymap"
+
+
+@pytest.mark.parametrize("buffer", (True, False))
+def test_stdout(monkeypatch, buffer):
+    if buffer:
+
+        class MyStdOut:
+            buffer = BytesIO()
+
+        monkeypatch.setattr(sys, "stdout", MyStdOut())
+    else:
+        monkeypatch.setattr(sys, "stdout", BytesIO())
+
+    im = hopper()
+    im.save(sys.stdout, "PPM")
+
+    if buffer:
+        im2 = Image.open(sys.stdout.buffer)
+    else:
+        im2 = Image.open(sys.stdout)
+
+    assert_image_equal(im, im2)
