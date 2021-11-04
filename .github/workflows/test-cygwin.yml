@@ -1,0 +1,88 @@
+name: Test Cygwin
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-2019
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ["x86", "x64"]
+
+    defaults:
+      run:
+        shell: bash.exe --login --norc -eo pipefail -o igncr '{0}'
+    env:
+      CHERE_INVOKING: 1
+
+    timeout-minutes: 30
+    name: ${{ matrix.platform }}
+
+    steps:
+      - name: Set git to use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Checkout Pillow
+        uses: actions/checkout@v2
+
+      - name: Set up Cygwin
+        uses: egor-tensin/setup-cygwin@v3
+        with:
+          platform: ${{ matrix.platform }}
+          packages: >-
+            python3-cffi
+            python3-devel
+            python3-numpy
+            python3-olefile
+            python3-pip
+            python3-pyqt5
+            python3-setuptools
+            python3-tkinter
+            ghostscript
+            libfreetype-devel
+            libimagequant-devel
+            libjpeg-devel
+            liblcms2-devel
+            libopenjp2-devel
+            libraqm-devel
+            libtiff-devel
+            libwebp-devel
+            libX11-xcb-devel
+            subversion
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install pyroma pytest pytest-cov pytest-timeout
+          cd $GITHUB_WORKSPACE
+          pushd depends && ./install_extra_test_images.sh && popd
+
+      - name: Build Pillow
+        run: |
+          cd $GITHUB_WORKSPACE
+          CFLAGS="-coverage" python3 setup.py build_ext install
+
+      - name: Test Pillow
+        run: |
+          cd $GITHUB_WORKSPACE
+          python3 selftest.py --installed
+          python3 -c "from PIL import Image"
+          python3 -m pytest -vx --cov PIL --cov Tests --cov-report term --cov-report xml Tests
+
+      - name: Upload coverage
+        run: |
+          cd $GITHUB_WORKSPACE
+          python3 -m pip install codecov
+          bash <(curl -s https://codecov.io/bash) -F GHA_Windows
+        env:
+          CODECOV_NAME: ${{ matrix.name }}
+
+  success:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Cygwin Test Successful
+    steps:
+      - name: Success
+        run: echo Cygwin Test Successful
