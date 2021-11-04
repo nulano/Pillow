@@ -69,7 +69,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           python3 selftest.py --installed
           python3 -c "from PIL import Image"
-          python3 -m pytest -vx --cov PIL --cov Tests --cov-report term --cov-report xml Tests
+          python3 -m pytest -v --cov PIL --cov Tests --cov-report term --cov-report xml Tests
 
       - name: Upload coverage
         run: |
