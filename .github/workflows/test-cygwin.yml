@@ -33,14 +33,14 @@ jobs:
         with:
           platform: ${{ matrix.platform }}
           packages: >-
-            python3-cffi
-            python3-devel
-            python3-numpy
-            python3-olefile
-            python3-pip
+            python38-cffi
+            python38-devel
+            python38-numpy
+            python38-olefile
+            python38-pip
             python3-pyqt5
-            python3-setuptools
-            python3-tkinter
+            python38-setuptools
+            python38-tkinter
             ghostscript
             libfreetype-devel
             libimagequant-devel
@@ -52,29 +52,33 @@ jobs:
             libwebp-devel
             libX11-xcb-devel
             subversion
+            netpbm
+            jpeg
+            ImageMagick
 
       - name: Install Python dependencies
         run: |
-          python3 -m pip install pyroma pytest pytest-cov pytest-timeout
+          which python3.8
+          python3.8 -m pip install pyroma pytest pytest-cov pytest-timeout
           cd $GITHUB_WORKSPACE
           pushd depends && ./install_extra_test_images.sh && popd
 
       - name: Build Pillow
         run: |
           cd $GITHUB_WORKSPACE
-          CFLAGS="-coverage" python3 setup.py build_ext install
+          CFLAGS="-coverage" python3.8 setup.py build_ext install
 
       - name: Test Pillow
         run: |
           cd $GITHUB_WORKSPACE
-          python3 selftest.py --installed
-          python3 -c "from PIL import Image"
-          python3 -m pytest -v --cov PIL --cov Tests --cov-report term --cov-report xml Tests
+          python3.8 selftest.py --installed
+          python3.8 -c "from PIL import Image"
+          python3.8 -m pytest -v --cov PIL --cov Tests --cov-report term --cov-report xml Tests
 
       - name: Upload coverage
         run: |
           cd $GITHUB_WORKSPACE
-          python3 -m pip install codecov
+          python3.8 -m pip install codecov
           bash <(curl -s https://codecov.io/bash) -F GHA_Windows
         env:
           CODECOV_NAME: ${{ matrix.name }}
