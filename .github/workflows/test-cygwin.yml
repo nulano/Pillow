@@ -67,6 +67,11 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           CFLAGS="-coverage" python3.8 setup.py build_ext install
+          
+      - name: Rebase Pillow DLLs
+        run: |
+          cd $GITHUB_WORKSPACE
+          /usr/bin/rebase --database --oblivious $(find /usr/{,local/}lib/python3.8/site-packages/ -name \*.dll)
 
       - name: Test Pillow
         run: |
