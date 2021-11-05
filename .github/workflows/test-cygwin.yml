@@ -52,7 +52,6 @@ jobs:
             libwebp-devel
             libX11-xcb-devel
             subversion
-            netpbm
             jpeg
             ImageMagick
 
