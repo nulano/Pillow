@@ -24,8 +24,7 @@
 """
 
 
-from . import Image, ImageColor, ImageDraw, ImageFont, ImagePath
-from ._deprecate import deprecate
+from . import Image, ImageColor, ImageDraw, ImageFont, ImagePath, _deprecate
 
 
 class Pen:
@@ -177,8 +176,13 @@ class Draw:
 
         .. seealso:: :py:meth:`PIL.ImageDraw.ImageDraw.textsize`
         """
-        deprecate("textsize", 10, "textbbox or textlength")
-        return self.draw.textsize(text, font=font.font, __internal__=True)
+        _deprecate.deprecate("textsize", 10, "textbbox or textlength")
+        _deprecate._suppress_internal_deprecations = True
+        try:
+            size = self.draw.textsize(text, font=font.font)
+        finally:
+            _deprecate._suppress_internal_deprecations = False
+        return size
 
     def textbbox(self, xy, text, font):
         """

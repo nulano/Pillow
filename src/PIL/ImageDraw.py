@@ -33,8 +33,7 @@
 import math
 import numbers
 
-from . import Image, ImageColor
-from ._deprecate import deprecate
+from . import Image, ImageColor, _deprecate
 
 """
 A simple 2D drawing interface for PIL images.
@@ -375,15 +374,19 @@ class ImageDraw:
 
     def _multiline_spacing(self, font, spacing, stroke_width):
         # this can be replaced with self.textbbox(...)[3] when textsize is removed
-        return (
-            self.textsize(
-                "A",
-                font=font,
-                stroke_width=stroke_width,
-                __internal__=True,
-            )[1]
-            + spacing
-        )
+        _deprecate._suppress_internal_deprecations = True
+        try:
+            multiline_spacing = (
+                self.textsize(
+                    "A",
+                    font=font,
+                    stroke_width=stroke_width,
+                )[1]
+                + spacing
+            )
+        finally:
+            _deprecate._suppress_internal_deprecations = False
+        return multiline_spacing
 
     def text(
         self,
@@ -582,33 +585,40 @@ class ImageDraw:
         features=None,
         language=None,
         stroke_width=0,
-        __internal__=False,
     ):
         """Get the size of a given string, in pixels."""
-        if not __internal__:
-            deprecate("textsize", 10, "textbbox or textlength")
+        if not _deprecate._suppress_internal_deprecations:
+            _deprecate.deprecate("textsize", 10, "textbbox or textlength")
         if self._multiline_check(text):
-            return self.multiline_textsize(
+            _deprecate._suppress_internal_deprecations = True
+            try:
+                size = self.multiline_textsize(
+                    text,
+                    font,
+                    spacing,
+                    direction,
+                    features,
+                    language,
+                    stroke_width,
+                )
+            finally:
+                _deprecate._suppress_internal_deprecations = False
+            return size
+
+        if font is None:
+            font = self.getfont()
+        _deprecate._suppress_internal_deprecations = True
+        try:
+            size = font.getsize(
                 text,
-                font,
-                spacing,
                 direction,
                 features,
                 language,
                 stroke_width,
-                __internal__=True,
             )
-
-        if font is None:
-            font = self.getfont()
-        return font.getsize(
-            text,
-            direction,
-            features,
-            language,
-            stroke_width,
-            __internal__=True,
-        )
+        finally:
+            _deprecate._suppress_internal_deprecations = False
+        return size
 
     def multiline_textsize(
         self,
@@ -619,24 +629,26 @@ class ImageDraw:
         features=None,
         language=None,
         stroke_width=0,
-        __internal__=False,
     ):
-        if not __internal__:
-            deprecate("multiline_textsize", 10, "multiline_textbbox")
+        if not _deprecate._suppress_internal_deprecations:
+            _deprecate.deprecate("multiline_textsize", 10, "multiline_textbbox")
         max_width = 0
         lines = self._multiline_split(text)
         line_spacing = self._multiline_spacing(font, spacing, stroke_width)
         for line in lines:
-            line_width, line_height = self.textsize(
-                line,
-                font,
-                spacing,
-                direction,
-                features,
-                language,
-                stroke_width,
-                __internal__=True,
-            )
+            _deprecate._suppress_internal_deprecations = True
+            try:
+                line_width, line_height = self.textsize(
+                    line,
+                    font,
+                    spacing,
+                    direction,
+                    features,
+                    language,
+                    stroke_width,
+                )
+            finally:
+                _deprecate._suppress_internal_deprecations = False
             max_width = max(max_width, line_width)
         return max_width, len(lines) * line_spacing - spacing
 
@@ -661,15 +673,18 @@ class ImageDraw:
         try:
             return font.getlength(text, mode, direction, features, language)
         except AttributeError:
-            deprecate("textlength support for fonts without getlength", 10)
-            size = self.textsize(
-                text,
-                font,
-                direction=direction,
-                features=features,
-                language=language,
-                __internal__=True,
-            )
+            _deprecate.deprecate("textlength support for fonts without getlength", 10)
+            _deprecate._suppress_internal_deprecations = True
+            try:
+                size = self.textsize(
+                    text,
+                    font,
+                    direction=direction,
+                    features=features,
+                    language=language,
+                )
+            finally:
+                _deprecate._suppress_internal_deprecations = False
             if direction == "ttb":
                 return size[1]
             return size[0]

@@ -4,6 +4,8 @@ import warnings
 
 from . import __version__
 
+_suppress_internal_deprecations = False
+
 
 def deprecate(
     deprecated: str,

@@ -32,8 +32,7 @@ import warnings
 from enum import IntEnum
 from io import BytesIO
 
-from . import Image
-from ._deprecate import deprecate
+from . import Image, _deprecate
 from ._util import is_directory, is_path
 
 
@@ -47,7 +46,7 @@ def __getattr__(name):
         if name.startswith(prefix):
             name = name[len(prefix) :]
             if name in enum.__members__:
-                deprecate(f"{prefix}{name}", 10, f"{enum.__name__}.{name}")
+                _deprecate.deprecate(f"{prefix}{name}", 10, f"{enum.__name__}.{name}")
                 return enum[name]
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
@@ -143,8 +142,8 @@ class ImageFont:
 
         :return: (width, height)
         """
-        if not kwargs.get("__internal__"):
-            deprecate("getsize", 10, "getbbox or getlength")
+        if not _deprecate._suppress_internal_deprecations:
+            _deprecate.deprecate("getsize", 10, "getbbox or getlength")
         return self.font.getsize(text)
 
     def getmask(self, text, mode="", *args, **kwargs):
@@ -421,7 +420,6 @@ class FreeTypeFont:
         features=None,
         language=None,
         stroke_width=0,
-        __internal__=False,
     ):
         """
         Returns width and height (in pixels) of given text if rendered in font with
@@ -473,8 +471,8 @@ class FreeTypeFont:
 
         :return: (width, height)
         """
-        if not __internal__:
-            deprecate("getsize", 10, "getbbox or getlength")
+        if not _deprecate._suppress_internal_deprecations:
+            _deprecate.deprecate("getsize", 10, "getbbox or getlength")
         # vertical offset is added for historical reasons
         # see https://github.com/python-pillow/Pillow/pull/4910#discussion_r486682929
         size, offset = self.font.getsize(text, "L", direction, features, language)
@@ -532,17 +530,19 @@ class FreeTypeFont:
 
         :return: (width, height)
         """
-        deprecate("getsize_multiline", 10)
+        _deprecate.deprecate("getsize_multiline", 10)
         max_width = 0
         lines = self._multiline_split(text)
-        line_spacing = (
-            self.getsize("A", stroke_width=stroke_width, __internal__=True)[1] + spacing
-        )
-        for line in lines:
-            line_width, line_height = self.getsize(
-                line, direction, features, language, stroke_width, __internal__=True
-            )
-            max_width = max(max_width, line_width)
+        _deprecate._suppress_internal_deprecations = True
+        try:
+            line_spacing = self.getsize("A", stroke_width=stroke_width)[1] + spacing
+            for line in lines:
+                line_width, line_height = self.getsize(
+                    line, direction, features, language, stroke_width
+                )
+                max_width = max(max_width, line_width)
+        finally:
+            _deprecate._suppress_internal_deprecations = False
 
         return max_width, len(lines) * line_spacing - spacing
 
@@ -556,7 +556,7 @@ class FreeTypeFont:
 
         :return: A tuple of the x and y offset
         """
-        deprecate("getoffset", 10, "getbbox")
+        _deprecate.deprecate("getoffset", 10, "getbbox")
         return self.font.getsize(text)[1]
 
     def getmask(
@@ -727,7 +727,7 @@ class FreeTypeFont:
         if fill is _UNSPECIFIED:
             fill = Image.core.fill
         else:
-            deprecate("fill", 10)
+            _deprecate.deprecate("fill", 10)
         size, offset = self.font.getsize(
             text, mode, direction, features, language, anchor
         )
@@ -837,12 +837,15 @@ class TransposedFont:
         self.orientation = orientation  # any 'transpose' argument, or None
 
     def getsize(self, text, *args, **kwargs):
-        if not kwargs.get("__internal__"):
-            deprecate("getsize", 10, "getbbox or getlength")
+        if not _deprecate._suppress_internal_deprecations:
+            _deprecate.deprecate("getsize", 10, "getbbox or getlength")
+        _deprecate._suppress_internal_deprecations = True
         try:
-            w, h = self.font.getsize(text, __internal__=True)
+            w, h = self.font.getsize(text)
         except TypeError:
             w, h = self.font.getsize(text)
+        finally:
+            _deprecate._suppress_internal_deprecations = False
         if self.orientation in (Image.Transpose.ROTATE_90, Image.Transpose.ROTATE_270):
             return h, w
         return w, h
