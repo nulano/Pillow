@@ -76,6 +76,8 @@ def test_textsize(request, tmp_path):
     tempname = save_font(request, tmp_path)
     font = ImageFont.load(tempname)
     for i in range(255):
+        with pytest.warns(DeprecationWarning):
+            font.getsize(chr(i))
         (ox, oy, dx, dy) = font.getbbox(chr(i))
         assert ox == 0
         assert oy == 0
