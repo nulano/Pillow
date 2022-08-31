@@ -52,7 +52,7 @@ jobs:
 
     - name: Install wheel from PyPI
       run: |
-        # wget ${{ matrix.wheel }}
+        python3 -m pip debug --verbose
         python3 -m pip install -vvv ${{ matrix.file }}
 
     - name: Test
