@@ -47,6 +47,7 @@ jobs:
       if: startsWith(matrix.os, 'macOS')
       run: |
         .github/workflows/macos-install.sh
+        python3 -m pip install --upgrade setuptools
       env:
         GHA_PYTHON_VERSION: ${{ matrix.python-version }}
 
