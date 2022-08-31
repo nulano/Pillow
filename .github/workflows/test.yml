@@ -15,10 +15,13 @@ jobs:
           "3.11-dev",
         ]
         wheel: [
+                 "no wheel",
                  "Pillow-9.2.0-cp311-cp311-macosx_11_0_universal2.whl",
                  "Pillow-9.2.0-cp311-cp311-macosx_10_10_universal2.whl",
         ]
         include:
+          - wheel: "no wheel"
+            file: "Pillow"
           - wheel: "Pillow-9.2.0-cp311-cp311-macosx_11_0_universal2.whl"
             file: "https://files.pythonhosted.org/packages/88/48/f433e808970f3d261d2fbcb888efc232feb66059d92cc53298ade7af0a4c/Pillow-9.2.0-cp311-cp311-macosx_11_0_universal2.whl"
           - wheel: "Pillow-9.2.0-cp311-cp311-macosx_10_10_universal2.whl"
@@ -57,7 +60,7 @@ jobs:
     - name: Install wheel from PyPI
       run: |
         # wget ${{ matrix.wheel }}
-        python3 -m pip install ${{ matrix.file }}
+        python3 -m pip install -vvv ${{ matrix.file }}
 
     - name: Test
       run: |
