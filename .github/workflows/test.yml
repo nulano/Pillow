@@ -10,31 +10,22 @@ jobs:
       matrix:
         os: [
           "macos-latest",
-          "ubuntu-latest",
         ]
         python-version: [
-          "pypy-3.8",
-          "pypy-3.7",
           "3.11-dev",
-          "3.10",
-          "3.9",
-          "3.8",
-          "3.7",
+        ]
+        wheel: [
+                 "Pillow-9.2.0-cp311-cp311-macosx_11_0_universal2.whl",
+                 "Pillow-9.2.0-cp311-cp311-macosx_10_10_universal2.whl",
         ]
         include:
-        - python-version: "3.7"
-          PYTHONOPTIMIZE: 1
-          REVERSE: "--reverse"
-        - python-version: "3.8"
-          PYTHONOPTIMIZE: 2
-        # Include new variables for Codecov
-        - os: ubuntu-latest
-          codecov-flag: GHA_Ubuntu
-        - os: macos-latest
-          codecov-flag: GHA_macOS
+          - wheel: "Pillow-9.2.0-cp311-cp311-macosx_11_0_universal2.whl"
+            file: "https://files.pythonhosted.org/packages/88/48/f433e808970f3d261d2fbcb888efc232feb66059d92cc53298ade7af0a4c/Pillow-9.2.0-cp311-cp311-macosx_11_0_universal2.whl"
+          - wheel: "Pillow-9.2.0-cp311-cp311-macosx_10_10_universal2.whl"
+            file: "https://files.pythonhosted.org/packages/38/bf/591fb5d727e291fe0e83b9c26eaf52b540ece7805c91c193fc653031aa66/Pillow-9.2.0-cp311-cp311-macosx_10_10_universal2.whl"
 
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} Python ${{ matrix.python-version }}
+    name: ${{ matrix.os }} Python ${{ matrix.python-version }} ${{ matrix.wheel }}
 
     steps:
     - uses: actions/checkout@v3
@@ -63,55 +54,15 @@ jobs:
       env:
         GHA_PYTHON_VERSION: ${{ matrix.python-version }}
 
-    - name: Build
+    - name: Install wheel from PyPI
       run: |
-        .ci/build.sh
+        # wget ${{ matrix.wheel }}
+        python3 -m pip install ${{ matrix.file }}
 
     - name: Test
       run: |
-        if [ $REVERSE ]; then
-          python3 -m pip install pytest-reverse
-        fi
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
           xvfb-run -s '-screen 0 1024x768x24' .ci/test.sh
         else
           .ci/test.sh
         fi
-      env:
-        PYTHONOPTIMIZE: ${{ matrix.PYTHONOPTIMIZE }}
-        REVERSE: ${{ matrix.REVERSE }}
-
-    - name: Prepare to upload errors
-      if: failure()
-      run: |
-        mkdir -p Tests/errors
-
-    - name: Upload errors
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: errors
-        path: Tests/errors
-
-    - name: Docs
-      if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == 3.10
-      run: |
-        python3 -m pip install furo sphinx-copybutton sphinx-issues sphinx-removed-in sphinxext-opengraph
-        make doccheck
-
-    - name: After success
-      run: |
-        .ci/after_success.sh
-
-    - name: Upload coverage
-      run: bash <(curl -s https://codecov.io/bash) -F ${{ matrix.codecov-flag }}
-      env:
-        CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}
-
-  success:
-    needs: build
-    runs-on: ubuntu-latest
-    name: Test Successful
-    steps:
-      - name: Success
-        run: echo Test Successful
