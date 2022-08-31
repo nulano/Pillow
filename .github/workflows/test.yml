@@ -47,6 +47,8 @@ jobs:
       if: startsWith(matrix.os, 'macOS')
       run: |
         python3 -m pip install --upgrade setuptools wheel
+        python3 -m pip install --upgrade packaging
+        python3 -c "import packaging.tags; print(list(packaging.tags.platform_tags()))"
         .github/workflows/macos-install.sh
       env:
         GHA_PYTHON_VERSION: ${{ matrix.python-version }}
