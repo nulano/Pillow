@@ -200,3 +200,30 @@ jobs:
     steps:
       - name: Success
         run: echo Windows Test Successful
+
+  verify:
+    needs: build
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7.0", "3.8.0", "3.9.0", "3.10.0"]
+        architecture: ["x86", "x64"]
+    timeout-minutes: 10
+    name: Verify wheel for Python ${{ matrix.python-version }} ${{ matrix.architecture }}
+    steps:
+      - uses: actions/download-artifact@v3
+
+      - name: Download Python Installer
+        run: Invoke-WebRequest https://www.python.org/ftp/python/${{ matrix.python-version }}/python-${{ matrix.python-version }}.exe
+
+      - name: Verify Wheel
+        run: |
+          echo on
+          echo start /wait C:\Pillow\%1 /quiet TargetDir=C:\Python > docker.bat
+          echo C:\Python\python.exe -m pip install --no-index --find-links C:\Pillow\ Pillow >> docker.bat
+          echo C:\Python\python.exe -m PIL >> docker.bat
+          type docker.bat
+          tree
+          echo mcr.microsoft.com/windows/servercore:ltsc2022
+        shell: cmd
