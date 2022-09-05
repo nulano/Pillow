@@ -241,6 +241,18 @@ deps = {
         "headers": [r"png*.h"],
         "libs": [r"libpng16.lib"],
     },
+    "bzip2": {
+        "url": "https://mirrors.kernel.org/sourceware/bzip2/bzip2-1.0.8.tar.gz",
+        "filename": "bzip2-1.0.8.tar.gz",
+        "dir": "bzip2-1.0.8",
+        "license": "LICENSE",
+        "build": [
+            cmd_nmake(r"makefile.msc", "clean"),
+            cmd_nmake(r"makefile.msc", "lib"),
+        ],
+        "headers": ["bzlib.h"],
+        "libs": ["libbz2.lib"],
+    },
     "freetype": {
         "url": "https://download.savannah.gnu.org/releases/freetype/freetype-2.12.1.tar.gz",  # noqa: E501
         "filename": "freetype-2.12.1.tar.gz",
@@ -254,10 +266,10 @@ deps = {
                 '<PropertyGroup Label="Globals">': '<PropertyGroup Label="Globals">\n    <WindowsTargetPlatformVersion>$(WindowsSDKVersion)</WindowsTargetPlatformVersion>',  # noqa: E501
             },
             r"builds\windows\vc2010\freetype.user.props": {
-                "<UserDefines></UserDefines>": "<UserDefines>FT_CONFIG_OPTION_SYSTEM_ZLIB;FT_CONFIG_OPTION_USE_PNG;FT_CONFIG_OPTION_USE_HARFBUZZ</UserDefines>",  # noqa: E501
+                "<UserDefines></UserDefines>": "<UserDefines>FT_CONFIG_OPTION_SYSTEM_ZLIB;FT_CONFIG_OPTION_USE_BZIP2;FT_CONFIG_OPTION_USE_PNG;FT_CONFIG_OPTION_USE_HARFBUZZ</UserDefines>",  # noqa: E501
                 "<UserIncludeDirectories></UserIncludeDirectories>": r"<UserIncludeDirectories>{dir_harfbuzz}\src;{inc_dir}</UserIncludeDirectories>",  # noqa: E501
                 "<UserLibraryDirectories></UserLibraryDirectories>": "<UserLibraryDirectories>{lib_dir}</UserLibraryDirectories>",  # noqa: E501
-                "<UserDependencies></UserDependencies>": "<UserDependencies>zlib.lib;libpng16.lib</UserDependencies>",  # noqa: E501
+                "<UserDependencies></UserDependencies>": "<UserDependencies>zlib.lib;libbz2.lib;libpng16.lib</UserDependencies>",  # noqa: E501
             },
             r"src/autofit/afshaper.c": {
                 # link against harfbuzz.lib

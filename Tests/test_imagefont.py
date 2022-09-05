@@ -149,6 +149,27 @@ class TestImageFont:
             im, "Tests/images/rectangle_surrounding_text.png", 2.5
         )
 
+    def test_bzip2(self):
+        im = Image.new(mode="RGB", size=(300, 100))
+        draw = ImageDraw.Draw(im)
+        try:
+            ttf = ImageFont.truetype(
+                FONT_PATH + ".bz2", FONT_SIZE, layout_engine=self.LAYOUT_ENGINE
+            )
+        except OSError as e:
+            if str(e) == "unknown file format":
+                pytest.skip("freetype compiled without libbz2")
+            raise
+
+        txt = "Hello World!"
+        bbox = draw.textbbox((10, 10), txt, ttf)
+        draw.text((10, 10), txt, font=ttf)
+        draw.rectangle(bbox)
+
+        assert_image_similar_tofile(
+            im, "Tests/images/rectangle_surrounding_text.png", 2.5
+        )
+
     @pytest.mark.parametrize(
         "text, mode, font, size, length_basic, length_raqm",
         (
