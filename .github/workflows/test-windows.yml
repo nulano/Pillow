@@ -149,11 +149,10 @@ jobs:
         & $env:pythonLocation\python.exe selftest.py --installed
       shell: pwsh
 
-    # skip PyPy for speed
     - name: Enable heap verification
-      if: "!contains(matrix.python-version, 'pypy')"
       run: |
         & reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\python.exe" /v "GlobalFlag" /t REG_SZ /d "0x02000000" /f
+        & reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\pypy.exe" /v "GlobalFlag" /t REG_SZ /d "0x02000000" /f
 
     - name: Test Pillow
       run: |
