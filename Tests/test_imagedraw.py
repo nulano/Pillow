@@ -1331,6 +1331,96 @@ def test_setting_default_font():
         assert isinstance(draw.getfont(), ImageFont.ImageFont)
 
 
+@pytest.mark.parametrize(
+    "anchor, expected",
+    (("la", "lt"), ("lt", "lt"), ("mm", "mm"), ("rb", "rb"), ("rd", "rb")),
+)
+def test_anchor(anchor, expected):
+    # test anchor with ImageFont, see also test_imagefont:test_anchor
+
+    name, text = "basic", "ImageFont"
+    path = f"Tests/images/test_anchor_{name}_{expected}.png"
+
+    width, height = 54, 11
+    if expected == "lt":
+        left, top = 0, 0
+    elif expected == "mm":
+        left, top = -27, -5
+    elif expected == "rb":
+        left, top = -54, -11
+
+    bbox_expected = (left, top, left + width, top + height)
+
+    im = Image.new("L", (200, 50), "white")
+    d = ImageDraw.Draw(im)
+    d.line(((0, 25), (200, 25)), "gray")
+    d.line(((100, 0), (100, 50)), "gray")
+    d.text((100, 25), text, fill="black", anchor=anchor)  # using default font
+
+    assert d.textbbox((0, 0), text, anchor=anchor) == bbox_expected
+
+    assert_image_equal_tofile(im, path)
+
+
+@pytest.mark.parametrize(
+    "anchor, align",
+    (
+        ("la", "left"),
+        ("la", "center"),
+        ("la", "right"),
+        ("mm", "left"),
+        ("mm", "center"),
+        ("mm", "right"),
+        ("rd", "left"),
+        ("rd", "center"),
+        ("rd", "right"),
+    ),
+)
+def test_anchor_multiline(anchor, align):
+    # test anchor with ImageFont, see also test_imagefont:test_anchor_multiline
+
+    target = f"Tests/images/test_anchor_basic_multiline_{anchor}_{align}.png"
+    text = "a\nlong\nImageFont sample"
+
+    # test render
+    im = Image.new("L", (200, 100), "white")
+    d = ImageDraw.Draw(im)
+    d.line(((0, 50), (200, 50)), "gray")
+    d.line(((100, 0), (100, 100)), "gray")
+    d.multiline_text((100, 50), text, fill="black", anchor=anchor, align=align)
+
+    assert_image_equal_tofile(im, target)
+
+
+def test_anchor_invalid():
+    # test anchor with ImageFont, see also test_imagefont:test_anchor_invalid
+
+    im = Image.new("RGB", (100, 100), "white")
+    d = ImageDraw.Draw(im)
+    font = d.getfont()  # get default font
+
+    for anchor in ["", "l", "a", "lax", "sa", "xa", "lx", "ls"]:
+        pytest.raises(ValueError, lambda: font.getmask2("hello", anchor=anchor))
+        pytest.raises(ValueError, lambda: font.getbbox("hello", anchor=anchor))
+        pytest.raises(ValueError, lambda: d.text((0, 0), "hello", anchor=anchor))
+        pytest.raises(ValueError, lambda: d.textbbox((0, 0), "hello", anchor=anchor))
+        pytest.raises(
+            ValueError, lambda: d.multiline_text((0, 0), "foo\nbar", anchor=anchor)
+        )
+        pytest.raises(
+            ValueError,
+            lambda: d.multiline_textbbox((0, 0), "foo\nbar", anchor=anchor),
+        )
+    for anchor in ["lt", "lb"]:
+        pytest.raises(
+            ValueError, lambda: d.multiline_text((0, 0), "foo\nbar", anchor=anchor)
+        )
+        pytest.raises(
+            ValueError,
+            lambda: d.multiline_textbbox((0, 0), "foo\nbar", anchor=anchor),
+        )
+
+
 def test_same_color_outline():
     # Prepare shape
     x0, y0 = 5, 5

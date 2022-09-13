@@ -719,7 +719,13 @@ class ImageDraw:
             font = self.getfont()
         mode = "RGBA" if embedded_color else self.fontmode
         bbox = font.getbbox(
-            text, mode, direction, features, language, stroke_width, anchor
+            text,
+            mode,
+            direction=direction,
+            features=features,
+            language=language,
+            stroke_width=stroke_width,
+            anchor=anchor,
         )
         return bbox[0] + xy[0], bbox[1] + xy[1], bbox[2] + xy[0], bbox[3] + xy[1]
 

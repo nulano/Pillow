@@ -170,22 +170,62 @@ class ImageFont:
         """
         return self.font.getmask(text, mode)
 
-    def getbbox(self, text, *args, **kwargs):
+    def getmask2(self, text, mode="", *args, anchor=None, **kwargs):
+        """
+        Create a bitmap for the text.
+
+        If the font uses antialiasing, the bitmap should have mode ``L`` and use a
+        maximum value of 255. Otherwise, it should have mode ``1``.
+
+        :param text:    Text to render.
+        :param mode:    Used by some graphics drivers to indicate what mode the
+                        driver prefers; if empty, the renderer may return either
+                        mode. Note that the mode is always a string, to simplify
+                        C-level implementations.
+        :param anchor:  The text anchor alignment. Determines the relative location of
+                        the anchor to the text. The default alignment is top left.
+                        See :ref:`text-anchors` for valid values.
+
+        :return: A tuple of an internal PIL storage memory instance as defined by the
+                 :py:mod:`PIL.Image.core` interface module, and the text offset, the
+                 gap between the starting coordinate and the first marking
+        """
+        left, top, right, bottom = self.getbbox(
+            text, mode, *args, anchor=anchor, **kwargs
+        )
+        return self.getmask(text, mode, *args, **kwargs), (left, top)
+
+    def getbbox(self, text, *args, anchor=None, **kwargs):
         """
         Returns bounding box (in pixels) of given text.
 
         .. versionadded:: 9.2.0
 
-        :param text: Text to render.
-        :param mode: Used by some graphics drivers to indicate what mode the
-                     driver prefers; if empty, the renderer may return either
-                     mode. Note that the mode is always a string, to simplify
-                     C-level implementations.
+        :param text:    Text to render.
+        :param anchor:  The text anchor alignment. Determines the relative location of
+                        the anchor to the text. The default alignment is top left.
+                        See :ref:`text-anchors` for valid values.
+
+                         .. versionadded:: 9.3.0
 
         :return: ``(left, top, right, bottom)`` bounding box
         """
         width, height = self.font.getsize(text)
-        return 0, 0, width, height
+        if anchor is None:
+            left, top = 0, 0
+        elif len(anchor) != 2:
+            raise ValueError("anchor must be a 2 character string")
+        elif anchor[1] == "s":
+            raise ValueError("baseline anchor not supported for basic ImageFont")
+        else:
+            try:
+                left = {"l": 0, "m": -(width // 2), "r": -width}[anchor[0]]
+                top = {"a": 0, "t": 0, "m": -(height // 2), "b": -height, "d": -height}[
+                    anchor[1]
+                ]
+            except KeyError:
+                raise ValueError(f"bad anchor specified: {anchor!r}")
+        return left, top, width + left, height + top
 
     def getlength(self, text, *args, **kwargs):
         """

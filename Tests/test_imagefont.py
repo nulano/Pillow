@@ -802,6 +802,8 @@ def test_textbbox_non_freetypefont():
     ids=("ls", "ms", "rs", "ma", "mt", "mm", "mb", "md"),
 )
 def test_anchor(layout_engine, anchor, left, top):
+    # test anchor with FreeTypeFont, see also test_imagedraw:test_anchor
+
     name, text = "quick", "Quick"
     path = f"Tests/images/test_anchor_{name}_{anchor}.png"
 
@@ -847,6 +849,8 @@ def test_anchor(layout_engine, anchor, left, top):
     ),
 )
 def test_anchor_multiline(layout_engine, anchor, align):
+    # test anchor with FreeTypeFont, see also test_imagedraw:test_anchor_multiline
+
     target = f"Tests/images/test_anchor_multiline_{anchor}_{align}.png"
     text = "a\nlong\ntext sample"
 
@@ -865,6 +869,8 @@ def test_anchor_multiline(layout_engine, anchor, align):
 
 
 def test_anchor_invalid(font):
+    # test anchor with FreeTypeFont, see also test_imagedraw:test_anchor_invalid
+
     im = Image.new("RGB", (100, 100), "white")
     d = ImageDraw.Draw(im)
     d.font = font

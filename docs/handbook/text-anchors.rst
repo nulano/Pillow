@@ -8,8 +8,8 @@ The ``anchor`` parameter determines the alignment of drawn text relative to the 
 The default alignment is top left, specifically ``la`` (left-ascender) for horizontal text
 and ``lt`` (left-top) for vertical text.
 
-This parameter is only supported by OpenType/TrueType fonts.
-Other fonts may ignore the parameter and use the default (top left) alignment.
+Support for this parameter for OpenType/TrueType fonts was added in Pillow 8.0.0.
+Support for this parameter for other fonts was added in Pillow 9.3.0.
 
 Specifying an anchor
 ^^^^^^^^^^^^^^^^^^^^
@@ -109,6 +109,8 @@ Vertical anchor alignment
     Anchor is at the baseline (bottom) of the first line of text, only descenders extend below the anchor.
 
     See `Font metrics on Wikipedia`_ for more information.
+
+    This alignment is only supported for OpenType/TrueType fonts.
 
 ``b`` --- bottom *(single-line text only)*
     Anchor is at the bottom of the text.
