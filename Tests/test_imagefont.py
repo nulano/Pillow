@@ -366,7 +366,7 @@ def test_rotated_transposed_font(font, orientation):
 def test_unrotated_transposed_font(font, orientation):
     img_grey = Image.new("L", (100, 100))
     draw = ImageDraw.Draw(img_grey)
-    word = "testing"
+    word = "Ťesting"
 
     transposed_font = ImageFont.TransposedFont(font, orientation=orientation)
 
@@ -888,6 +888,121 @@ def test_anchor_invalid(font):
             lambda: d.multiline_textbbox((0, 0), "foo\nbar", anchor=anchor),
         )
     for anchor in ["lt", "lb"]:
+        pytest.raises(
+            ValueError, lambda: d.multiline_text((0, 0), "foo\nbar", anchor=anchor)
+        )
+        pytest.raises(
+            ValueError,
+            lambda: d.multiline_textbbox((0, 0), "foo\nbar", anchor=anchor),
+        )
+
+
+@pytest.mark.parametrize(
+    "anchor, orientation, basic, raqm",
+    (
+        (None, None, (-10, 8), (-10, 8)),
+        (None, Image.Transpose.FLIP_LEFT_RIGHT, (-8, 8), (-1, 8)),
+        (None, Image.Transpose.FLIP_TOP_BOTTOM, (-10, 2), (-10, 2)),
+        (None, Image.Transpose.ROTATE_90, (0, -8), (0, -1)),
+        (None, Image.Transpose.ROTATE_180, (-8, 2), (-1, 2)),
+        (None, Image.Transpose.ROTATE_270, (0, -10), (0, -10)),
+        ("la", None, (-10, 8), (-10, 8)),
+        ("la", Image.Transpose.FLIP_LEFT_RIGHT, (-8, 8), (-1, 8)),
+        ("la", Image.Transpose.FLIP_TOP_BOTTOM, (-10, 2), (-10, 2)),
+        ("la", Image.Transpose.ROTATE_180, (-8, 2), (-1, 2)),
+        ("lt", None, (-10, 0), (-10, 0)),
+        ("lt", Image.Transpose.FLIP_LEFT_RIGHT, (-8, 0), (-1, 0)),
+        ("lt", Image.Transpose.FLIP_TOP_BOTTOM, (-10, 0), (-10, 0)),
+        ("lt", Image.Transpose.ROTATE_90, (0, -8), (0, -1)),
+        ("lt", Image.Transpose.ROTATE_180, (-8, 0), (-1, 0)),
+        ("lt", Image.Transpose.ROTATE_270, (0, -10), (0, -10)),
+        ("mm", None, (-77, -9), (-75, -9)),
+        ("mm", Image.Transpose.FLIP_LEFT_RIGHT, (-75, -9), (-66, -9)),
+        ("mm", Image.Transpose.FLIP_TOP_BOTTOM, (-77, -15), (-75, -15)),
+        ("mm", Image.Transpose.ROTATE_90, (-9, -75), (-9, -66)),
+        ("mm", Image.Transpose.ROTATE_180, (-75, -15), (-66, -15)),
+        ("mm", Image.Transpose.ROTATE_270, (-15, -77), (-15, -75)),
+        ("ms", None, (-77, -18), (-75, -18)),
+        ("ms", Image.Transpose.FLIP_LEFT_RIGHT, (-75, -18), (-66, -18)),
+        ("ms", Image.Transpose.FLIP_TOP_BOTTOM, (-77, -6), (-75, -6)),
+        ("ms", Image.Transpose.ROTATE_180, (-75, -6), (-66, -6)),
+        ("rb", None, (-144, -24), (-140, -24)),
+        ("rb", Image.Transpose.FLIP_LEFT_RIGHT, (-142, -24), (-131, -24)),
+        ("rb", Image.Transpose.FLIP_TOP_BOTTOM, (-144, -24), (-140, -24)),
+        ("rb", Image.Transpose.ROTATE_90, (-24, -142), (-24, -131)),
+        ("rb", Image.Transpose.ROTATE_180, (-142, -24), (-131, -24)),
+        ("rb", Image.Transpose.ROTATE_270, (-24, -144), (-24, -140)),
+        ("rd", None, (-144, -26), (-140, -26)),
+        ("rd", Image.Transpose.FLIP_LEFT_RIGHT, (-142, -26), (-131, -26)),
+        ("rd", Image.Transpose.FLIP_TOP_BOTTOM, (-144, -32), (-140, -32)),
+        ("rd", Image.Transpose.ROTATE_180, (-142, -32), (-131, -32)),
+    ),
+)
+def test_transposed_anchor(layout_engine, anchor, orientation, basic, raqm):
+    # {COMBINING DOUBLE BREVE BELOW} Transposed {COMBINING DOUBLE MACRON BELOW}
+    text = "\u035CTransposed\u035F"
+    if orientation is None:
+        orientation_name = "None"
+    else:
+        orientation_name = orientation.name
+    path = (
+        "Tests/images/test_anchor_transposed_"
+        f"{layout_engine.name}_{anchor}_{orientation_name}.png"
+    )
+
+    if layout_engine == ImageFont.Layout.RAQM:
+        left, top = raqm
+        width, height = 141, 24
+    else:
+        left, top = basic
+        width, height = 152, 24
+
+    if orientation in (Image.Transpose.ROTATE_90, Image.Transpose.ROTATE_270):
+        bbox_expected = (left, top, left + height, top + width)
+    else:
+        bbox_expected = (left, top, left + width, top + height)
+
+    base_font = ImageFont.truetype(
+        "Tests/fonts/NotoSans-Regular.ttf", 24, layout_engine=layout_engine
+    )
+    font = ImageFont.TransposedFont(base_font, orientation=orientation)
+
+    im = Image.new("1", (300, 300), "white")
+    d = ImageDraw.Draw(im)
+    d.line(((0, 150), (300, 150)), "black")
+    d.line(((150, 0), (150, 300)), "black")
+    d.text((150, 150), text, fill="black", anchor=anchor, font=font)
+
+    assert d.textbbox((0, 0), text, font, anchor=anchor) == bbox_expected
+
+    assert_image_similar_tofile(im, path, 0)
+
+
+@pytest.mark.parametrize(
+    "orientation, rotated",
+    (
+        (None, False),
+        (Image.Transpose.ROTATE_180, False),
+        (Image.Transpose.FLIP_LEFT_RIGHT, False),
+        (Image.Transpose.FLIP_TOP_BOTTOM, False),
+        (Image.Transpose.ROTATE_90, True),
+        (Image.Transpose.ROTATE_270, True),
+    ),
+)
+def test_transposed_rotated_anchor_invalid(font, orientation, rotated):
+    im = Image.new("RGB", (100, 100), "white")
+    d = ImageDraw.Draw(im)
+    font = ImageFont.TransposedFont(font, orientation)
+    d.font = font
+
+    anchors = ["", "l", "a", "lax", "sa", "xa", "lx"]
+    if rotated:
+        anchors.extend(["la", "ls", "ld"])
+    for anchor in anchors:
+        pytest.raises(ValueError, lambda: font.getmask2("hello", anchor=anchor))
+        pytest.raises(ValueError, lambda: font.getbbox("hello", anchor=anchor))
+        pytest.raises(ValueError, lambda: d.text((0, 0), "hello", anchor=anchor))
+        pytest.raises(ValueError, lambda: d.textbbox((0, 0), "hello", anchor=anchor))
         pytest.raises(
             ValueError, lambda: d.multiline_text((0, 0), "foo\nbar", anchor=anchor)
         )

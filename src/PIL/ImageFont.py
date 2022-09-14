@@ -887,6 +887,79 @@ class TransposedFont:
         self.font = font
         self.orientation = orientation  # any 'transpose' argument, or None
 
+        # assume anchor is supported iff getmask2 exists
+        if hasattr(font, "getmask2"):
+            # expose getmask2 function to signal this font supports anchors
+            self.getmask2 = self._getmask2
+        else:
+            # ignore anchors in getbbox
+            self._transpose_anchor = self._transpose_anchor_not_supported
+            self._transpose_offset = self._transpose_offset_not_supported
+
+    def _transpose_anchor(self, direction, anchor):
+        if anchor is None:
+            if direction == "ttb" or self.orientation in (
+                Image.Transpose.ROTATE_90,
+                Image.Transpose.ROTATE_270,
+            ):
+                anchor = "lt"
+            else:
+                anchor = "la"
+        elif len(anchor) != 2:
+            raise ValueError("anchor must be a 2 character string")
+        horizontal, vertical = anchor
+        try:
+            if self.orientation == Image.Transpose.ROTATE_90:
+                vertical2 = {"l": "t", "m": "m", "r": "b"}[horizontal]
+                horizontal2 = {"t": "r", "m": "m", "b": "l"}[vertical]
+                return horizontal2 + vertical2
+            if self.orientation == Image.Transpose.ROTATE_270:
+                vertical2 = {"l": "b", "m": "m", "r": "t"}[horizontal]
+                horizontal2 = {"t": "l", "m": "m", "b": "r"}[vertical]
+                return horizontal2 + vertical2
+            if self.orientation in (
+                Image.Transpose.FLIP_LEFT_RIGHT,
+                Image.Transpose.ROTATE_180,
+            ):
+                horizontal = {"l": "r", "m": "m", "s": "s", "r": "l"}[horizontal]
+            if self.orientation in (
+                Image.Transpose.FLIP_TOP_BOTTOM,
+                Image.Transpose.ROTATE_180,
+            ):
+                vertical = {"a": "d", "t": "b", "m": "m", "s": "s", "b": "t", "d": "a"}[
+                    vertical
+                ]
+        except KeyError:
+            raise ValueError(f"bad anchor specified: {anchor!r}")
+        return horizontal + vertical
+
+    def _transpose_anchor_not_supported(self, direction, anchor):
+        if anchor is not None:
+            raise ValueError("wrapped font does not support anchors")
+        return None
+
+    def _transpose_offset(self, offset, size):
+        left, top = offset
+        width, height = size
+        if self.orientation == Image.Transpose.ROTATE_90:
+            return top, -(left + width)
+        if self.orientation == Image.Transpose.ROTATE_270:
+            return -(top + height), left
+        if self.orientation in (
+            Image.Transpose.FLIP_LEFT_RIGHT,
+            Image.Transpose.ROTATE_180,
+        ):
+            left = -(left + width)
+        if self.orientation in (
+            Image.Transpose.FLIP_TOP_BOTTOM,
+            Image.Transpose.ROTATE_180,
+        ):
+            top = -(top + height)
+        return left, top
+
+    def _transpose_offset_not_supported(self, offset, size):
+        return 0, 0
+
     def getsize(self, text, *args, **kwargs):
         """
         .. deprecated:: 9.2.0
@@ -907,15 +980,29 @@ class TransposedFont:
             return im.transpose(self.orientation)
         return im
 
-    def getbbox(self, text, *args, **kwargs):
-        # TransposedFont doesn't support getmask2, move top-left point to (0, 0)
-        # this has no effect on ImageFont and simulates anchor="lt" for FreeTypeFont
-        left, top, right, bottom = self.font.getbbox(text, *args, **kwargs)
+    def _getmask2(self, text, mode="", *args, direction=None, anchor=None, **kwargs):
+        im, offset = self.font.getmask2(
+            text,
+            mode,
+            *args,
+            anchor=self._transpose_anchor(direction, anchor),
+            **kwargs,
+        )
+        if self.orientation is not None:
+            offset = self._transpose_offset(offset, im.size)
+            return im.transpose(self.orientation), offset
+        return im, offset
+
+    def getbbox(self, text, *args, direction=None, anchor=None, **kwargs):
+        left, top, right, bottom = self.font.getbbox(
+            text, *args, anchor=self._transpose_anchor(direction, anchor), **kwargs
+        )
         width = right - left
         height = bottom - top
+        left, top = self._transpose_offset((left, top), (width, height))
         if self.orientation in (Image.Transpose.ROTATE_90, Image.Transpose.ROTATE_270):
-            return 0, 0, height, width
-        return 0, 0, width, height
+            return left, top, left + height, top + width
+        return left, top, left + width, top + height
 
     def getlength(self, text, *args, **kwargs):
         if self.orientation in (Image.Transpose.ROTATE_90, Image.Transpose.ROTATE_270):
