@@ -5,7 +5,7 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -16,24 +16,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [
-          "macos-latest",
           "ubuntu-latest",
         ]
         python-version: [
-          "pypy-3.8",
-          "pypy-3.7",
-          "3.11-dev",
           "3.10",
-          "3.9",
-          "3.8",
-          "3.7",
         ]
-        include:
-        - python-version: "3.7"
-          PYTHONOPTIMIZE: 1
-          REVERSE: "--reverse"
-        - python-version: "3.8"
-          PYTHONOPTIMIZE: 2
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} Python ${{ matrix.python-version }}
@@ -71,9 +58,6 @@ jobs:
 
     - name: Test
       run: |
-        if [ $REVERSE ]; then
-          python3 -m pip install pytest-reverse
-        fi
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
           xvfb-run -s '-screen 0 1024x768x24' .ci/test.sh
         else
@@ -82,34 +66,6 @@ jobs:
       env:
         PYTHONOPTIMIZE: ${{ matrix.PYTHONOPTIMIZE }}
         REVERSE: ${{ matrix.REVERSE }}
-
-    - name: Prepare to upload errors
-      if: failure()
-      run: |
-        mkdir -p Tests/errors
-
-    - name: Upload errors
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: errors
-        path: Tests/errors
-
-    - name: Docs
-      if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == 3.10
-      run: |
-        make doccheck
-
-    - name: After success
-      run: |
-        .ci/after_success.sh
-
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: ${{ matrix.os == 'macos-latest' && 'GHA_macOS' || 'GHA_Ubuntu' }}
-        name: ${{ matrix.os }} Python ${{ matrix.python-version }}
 
   success:
     permissions:
