@@ -23,6 +23,8 @@ jobs:
             architecture: "x64"
           - python-version: "pypy-3.8"
             architecture: "x64"
+          - python-version: "pypy-3.9"
+            architecture: "x64"
 
     timeout-minutes: 30
 
