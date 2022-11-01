@@ -1,20 +1,28 @@
 import os
+import shutil
 import subprocess
 import sys
 
 import pytest
 
-from PIL import Image, ImageGrab
+from PIL import Image, ImageGrab, UnidentifiedImageError
 
 from .helper import assert_image_equal_tofile, skip_unless_feature
 
 
 class TestImageGrab:
     @pytest.mark.skipif(
-        sys.platform not in ("win32", "darwin"), reason="requires Windows or macOS"
+        sys.platform not in ("win32", "darwin")
+        and not shutil.which("gnome-screenshot"),
+        reason="requires Windows or macOS, or Linux with gnome-screenshot",
     )
-    def test_grab(self):
-        ImageGrab.grab()
+    def test_grab(self, capsys):
+        try:
+            ImageGrab.grab()
+        except UnidentifiedImageError:
+            out, err = capsys.readouterr()
+            assert "cannot open display" in err
+            pytest.skip()
         ImageGrab.grab(include_layered_windows=True)
         ImageGrab.grab(all_screens=True)
 
@@ -22,9 +30,11 @@ class TestImageGrab:
         assert im.size == (40, 60)
 
     @skip_unless_feature("xcb")
-    def test_grab_x11(self):
+    def test_grab_xcb(self, monkeypatch):
         try:
             if sys.platform not in ("win32", "darwin"):
+                # test XCB is used when gnome-screenshot is not available
+                monkeypatch.setattr(shutil, "which", lambda x: False)
                 ImageGrab.grab()
 
             ImageGrab.grab(xdisplay="")
@@ -33,11 +43,6 @@ class TestImageGrab:
 
     @pytest.mark.skipif(Image.core.HAVE_XCB, reason="tests missing XCB")
     def test_grab_no_xcb(self):
-        if sys.platform not in ("win32", "darwin"):
-            with pytest.raises(OSError) as e:
-                ImageGrab.grab()
-            assert str(e.value).startswith("Pillow was built without XCB support")
-
         with pytest.raises(OSError) as e:
             ImageGrab.grab(xdisplay="")
         assert str(e.value).startswith("Pillow was built without XCB support")
