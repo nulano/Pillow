@@ -1,6 +1,7 @@
 param ([string]$python,[string]$arch)
 $ErrorActionPreference  = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+Set-PSDebug -Trace 1
 if ($python -like "pypy*") {
     $url = 'https://downloads.python.org/pypy/{0}-v7.3.11-win64.zip' -f $python
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
