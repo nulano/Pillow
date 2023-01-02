@@ -32,12 +32,6 @@ jobs:
     - name: Checkout Pillow
       uses: actions/checkout@v3
 
-    - name: Test Wheel
-      if: "github.event_name != 'pull_request'"
-      run: |
-        docker run --rm -v ${env:GITHUB_WORKSPACE}:C:\pillow mcr.microsoft.com/windows/servercore:ltsc2022 powershell C:\pillow\winbuild\test_docker.ps1 ${{ matrix.python-version }} ${{ matrix.architecture }}
-      shell: pwsh
-
     - name: Checkout cached dependencies
       uses: actions/checkout@v3
       with:
@@ -229,6 +223,10 @@ jobs:
       run: |
         docker run --rm -v ${env:GITHUB_WORKSPACE}:C:\pillow mcr.microsoft.com/windows/servercore:ltsc2022 powershell C:\pillow\winbuild\test_docker.ps1 ${{ matrix.python-version }} ${{ matrix.architecture }}
       shell: pwsh
+
+    - name: Setup tmate session
+      if: failure()
+      uses: mxschmitt/action-tmate@v3
 
     - name: Upload wheel
       uses: actions/upload-artifact@v3
