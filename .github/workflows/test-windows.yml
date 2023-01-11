@@ -29,11 +29,6 @@ jobs:
     name: Python ${{ matrix.python-version }} ${{ matrix.architecture }}
 
     steps:
-
-    - name: update msys
-      run: |
-        pacman -Syuu
-      shell: bash.exe --login -eo pipefail "{0}"
     - name: Checkout Pillow
       uses: actions/checkout@v3
 
