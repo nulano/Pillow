@@ -29,9 +29,10 @@ if ($python -like "pypy*") {
 $env:CI = "true"
 $env:path += ";C:\Python\;C:\pillow\winbuild\build\bin\"
 cd C:\pillow
-& python -VV | Write-Output
-& python -m ensurepip | Write-Output
-& python -m pip install pytest pytest-timeout | Write-Output
-& python -m pip install "dist\$(Get-ChildItem dist\*.whl -Name)" | Write-Output
-& python -m pytest -vx Tests\check_wheel.py Tests | Write-Output
+echo 'Testing echo!'
+Out-Null | & python -VV | Write-Output
+Out-Null | & python -m ensurepip | Write-Output
+Out-Null | & python -m pip install pytest pytest-timeout | Write-Output
+Out-Null | & python -m pip install "dist\$(Get-ChildItem dist\*.whl -Name)" | Write-Output
+Out-Null | & python -m pytest -vx Tests\check_wheel.py Tests | Write-Output
 if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit $LASTEXITCODE }
