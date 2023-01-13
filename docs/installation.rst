@@ -273,11 +273,27 @@ Many of Pillow's features require external libraries:
 
 .. tab:: Windows using MSYS2/MinGW
 
-    To build Pillow using MSYS2, make sure you run the **MSYS2 MinGW 32-bit** or
-    **MSYS2 MinGW 64-bit** console, *not* **MSYS2** directly.
+    The following instructions are for the **MSYS2 MINGW64** system.
+    To build Pillow on one of the other MSYS2 systems, replace all occurences of
+    ``mingw-w64-x86_64`` with the corresponding prefix:
 
-    The following instructions target the 64-bit build, for 32-bit
-    replace all occurrences of ``mingw-w64-x86_64-`` with ``mingw-w64-i686-``.
+    .. list-table::
+        :header-rows: 1
+
+        * - MSYS2 system
+          - Package prefix
+        * - **UCRT64**
+          - ``mingw-w64-ucrt-x86_64``
+        * - **CLANG64**
+          - ``mingw-w64-clang-x86_64``
+        * - **CLANG32**
+          - ``mingw-w64-clang-i686``
+        * - **MINGW64**
+          - ``mingw-w64-x86_64``
+        * - **MINGW32**
+          - ``mingw-w64-i686``
+
+    Installing in **MSYS2 MSYS** is not supported.
 
     Make sure you have Python and GCC installed::
 
@@ -287,7 +303,7 @@ Many of Pillow's features require external libraries:
             mingw-w64-x86_64-python3-pip \
             mingw-w64-x86_64-python3-setuptools
 
-    Prerequisites are installed on **MSYS2 MinGW 64-bit** with::
+    Prerequisites are installed on **MSYS2 MINGW64** with::
 
         pacman -S \
             mingw-w64-x86_64-libjpeg-turbo \
@@ -443,12 +459,12 @@ These platforms are built and tested for every change.
 | Gentoo                           | 3.9                        | x86-64              |
 +----------------------------------+----------------------------+---------------------+
 | macOS 11 Big Sur                 | 3.7, 3.8, 3.9, 3.10, 3.11, | x86-64              |
-|                                  | PyPy3                      |                     |
+|                                  | PyPy3.8, PyPy3.9           |                     |
 +----------------------------------+----------------------------+---------------------+
 | Ubuntu Linux 18.04 LTS (Bionic)  | 3.9                        | x86-64              |
 +----------------------------------+----------------------------+---------------------+
 | Ubuntu Linux 20.04 LTS (Focal)   | 3.7, 3.8, 3.9, 3.10, 3.11, | x86-64              |
-|                                  | PyPy3                      |                     |
+|                                  | PyPy3.8, PyPy3.9           |                     |
 +----------------------------------+----------------------------+---------------------+
 | Ubuntu Linux 22.04 LTS (Jammy)   | 3.10                       | arm64v8, ppc64le,   |
 |                                  |                            | s390x, x86-64       |
@@ -456,11 +472,13 @@ These platforms are built and tested for every change.
 | Windows Server 2016              | 3.7                        | x86-64              |
 +----------------------------------+----------------------------+---------------------+
 | Windows Server 2022              | 3.7, 3.8, 3.9, 3.10, 3.11, | x86, x86-64         |
-|                                  | PyPy3                      |                     |
-|                                  +----------------------------+---------------------+
-|                                  | 3.9 (MinGW)                | x86, x86-64         |
-|                                  +----------------------------+---------------------+
-|                                  | 3.8, 3.9 (Cygwin)          | x86-64              |
+|                                  | PyPy3.8, PyPy3.9           |                     |
++----------------------------------+----------------------------+---------------------+
+| Windows Server 2022 (MSYS2)      | 3.10                       | UCRT64, CLANG64,    |
+|                                  |                            | CLANG32, MINGW64,   |
+|                                  |                            | MINGW32             |
++----------------------------------+----------------------------+---------------------+
+| Windows Server 2022 (Cygwin)     | 3.8, 3.9                   | x86-64              |
 +----------------------------------+----------------------------+---------------------+
 
 
