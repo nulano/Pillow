@@ -66,6 +66,12 @@ static int have_raqm = 0;
 #define LAYOUT_RAQM 1
 
 typedef struct {
+    FT_Face face;
+    unsigned char *font_bytes;
+} FontFamilyFont;
+
+typedef struct {
+    FT_Face face;
     int index, x_offset, x_advance, y_offset, y_advance;
     unsigned int cluster;
 } GlyphInfo;
@@ -88,7 +94,14 @@ typedef struct {
     int layout_engine;
 } FontObject;
 
+typedef struct {
+    PyObject_HEAD int font_count;
+    FontFamilyFont *fonts;
+    int layout_engine;
+} FontFamilyObject;
+
 static PyTypeObject Font_Type;
+static PyTypeObject FontFamily_Type;
 
 /* round a 26.6 pixel coordinate to the nearest integer */
 #define PIXEL(x) ((((x) + 32) & -64) >> 6)
@@ -231,6 +244,133 @@ getfont(PyObject *self_, PyObject *args, PyObject *kw) {
     }
 
     return (PyObject *)self;
+}
+
+static PyObject *
+getfamily(PyObject *self_, PyObject *args, PyObject *kw) {
+    /* create a font family object from a list of file names and a sizes (in pixels) */
+
+    FontFamilyObject *self;
+    int error = 0;
+
+    PyTupleObject *fonts_tuple = NULL;
+    Py_ssize_t layout_engine = 0;
+    static char *kwlist[] = {"fonts", "layout_engine", NULL};
+
+    if (!library) {
+        PyErr_SetString(PyExc_OSError, "failed to initialize FreeType library");
+        return NULL;
+    }
+
+    if (!PyArg_ParseTupleAndKeywords(
+            args, kw, "O!|n", kwlist, &PyTuple_Type, &fonts_tuple, &layout_engine)) {
+        return NULL;
+    }
+
+    if (PyTuple_GET_SIZE(fonts_tuple) == 0) {
+        PyErr_BadArgument();
+        return NULL;
+    }
+
+    self = PyObject_New(FontFamilyObject, &FontFamily_Type);
+    if (!self) {
+        return NULL;
+    }
+
+    self->font_count = PyTuple_GET_SIZE(fonts_tuple);
+    self->layout_engine = layout_engine;
+    self->fonts = PyMem_New(FontFamilyFont, self->font_count);
+    if (!self->fonts) {
+        PyObject_Del(self);
+        return NULL;
+    }
+
+    FontFamilyFont *font = self->fonts;
+    for (int i = 0; i < self->font_count; ++i, ++font) {
+        char *filename;
+        Py_ssize_t size;
+        Py_ssize_t index;
+        unsigned char *encoding;
+        unsigned char *font_bytes = NULL;
+        Py_ssize_t font_bytes_size = 0;
+
+        if (!PyArg_ParseTuple(
+                PyTuple_GET_ITEM(fonts_tuple, i),
+                "etnns|y#",
+                Py_FileSystemDefaultEncoding,  // TODO PyConfig.filesystem_encoding
+                &filename,
+                &size,
+                &index,
+                &encoding,
+                &font_bytes,
+                &font_bytes_size)) {
+            goto err;
+        }
+
+        font->face = NULL;
+
+        if (filename && font_bytes_size <= 0) {
+            font->font_bytes = NULL;
+            error = FT_New_Face(library, filename, index, &font->face);
+        } else {
+            /* need to have allocated storage for font_bytes for the life of the
+             * object.*/
+            /* Don't free this before FT_Done_Face */
+            font->font_bytes = PyMem_Malloc(font_bytes_size);
+            if (!font->font_bytes) {
+                error = FT_Err_Out_Of_Memory;
+            }
+            if (!error) {
+                memcpy(font->font_bytes, font_bytes, (size_t)font_bytes_size);
+                error = FT_New_Memory_Face(
+                    library,
+                    (FT_Byte *)font->font_bytes,
+                    font_bytes_size,
+                    index,
+                    &font->face);
+            }
+        }
+
+        if (!error) {
+            error = FT_Set_Pixel_Sizes(font->face, 0, size);
+        }
+
+        if (!error && encoding && strlen((char *)encoding) == 4) {
+            FT_Encoding encoding_tag =
+                FT_MAKE_TAG(encoding[0], encoding[1], encoding[2], encoding[3]);
+            error = FT_Select_Charmap(font->face, encoding_tag);
+        }
+
+        if (filename) {
+            PyMem_Free(filename);
+        }
+
+        if (error) {
+            if (font->font_bytes) {
+                PyMem_Free(font->font_bytes);
+                font->font_bytes = NULL;
+            }
+            geterror(error);
+            goto err;
+        }
+    }
+
+    return (PyObject *)self;
+
+err:
+    for (FontFamilyFont *f = self->fonts; f != font; ++f) {
+        if (f->font_bytes) {
+            PyMem_Free(f->font_bytes);
+            f->font_bytes = NULL;
+        }
+        if (f->face) {
+            FT_Done_Face(f->face);
+            f->face = NULL;
+        }
+    }
+
+    PyObject_Del(self);
+    return NULL;
 }
 
 static int
@@ -380,6 +520,7 @@ text_layout_raqm(
     }
 
     for (i = 0; i < count; i++) {
+        (*glyph_info)[i].face = self->face;
         (*glyph_info)[i].index = glyphs[i].index;
         (*glyph_info)[i].x_offset = glyphs[i].x_offset;
         (*glyph_info)[i].x_advance = glyphs[i].x_advance;
@@ -446,6 +587,7 @@ text_layout_fallback(
         load_flags |= FT_LOAD_COLOR;
     }
     for (i = 0; font_getchar(string, i, &ch); i++) {
+        (*glyph_info)[i].face = self->face;
         (*glyph_info)[i].index = FT_Get_Char_Index(self->face, ch);
         error = FT_Load_Glyph(self->face, (*glyph_info)[i].index, load_flags);
         if (error) {
@@ -478,6 +620,100 @@ text_layout_fallback(
 }
 
 static size_t
+text_layout_family(
+    PyObject *string,
+    FontFamilyObject *self,
+    const char *dir,
+    PyObject *features,
+    const char *lang,
+    GlyphInfo **glyph_info,
+    int mask,
+    int color) {
+    int error, load_flags;
+    FT_ULong ch;
+    Py_ssize_t count;
+    FT_GlyphSlot glyph;
+    FT_UInt last_index = 0;
+    int i;
+
+    if (features != Py_None || dir != NULL || lang != NULL) {
+        PyErr_SetString(
+            PyExc_KeyError,
+            "setting text direction, language or font features is not supported "
+            "without libraqm");
+    }
+    if (!PyUnicode_Check(string)) {
+        PyErr_SetString(PyExc_TypeError, "expected string");
+        return 0;
+    }
+
+    count = 0;
+    while (font_getchar(string, count, &ch)) {
+        count++;
+    }
+    if (count == 0) {
+        return 0;
+    }
+
+    (*glyph_info) = PyMem_New(GlyphInfo, count);
+    if ((*glyph_info) == NULL) {
+        PyErr_SetString(PyExc_MemoryError, "PyMem_New() failed");
+        return 0;
+    }
+
+    load_flags = FT_LOAD_DEFAULT;
+    if (mask) {
+        load_flags |= FT_LOAD_TARGET_MONO;
+    }
+#ifdef FT_LOAD_COLOR
+    if (color) {
+        load_flags |= FT_LOAD_COLOR;
+    }
+#endif
+    for (i = 0; font_getchar(string, i, &ch); i++) {
+        FontFamilyFont *font = self->fonts;
+        int found = 0;
+        for (int j = 0; !found && j < self->font_count; j++, font++) {
+            (*glyph_info)[i].index = FT_Get_Char_Index(font->face, ch);
+            if ((*glyph_info)[i].index != 0) {
+                found = 1;
+            }
+            if (j == 0 || found) {  /* use first font's missing glyph */
+                (*glyph_info)[i].face = font->face;
+                error = FT_Load_Glyph(font->face, (*glyph_info)[i].index, load_flags);
+                if (error) {
+                    geterror(error);
+                    return 0;
+                }
+                glyph = font->face->glyph;
+                (*glyph_info)[i].x_offset = 0;
+                (*glyph_info)[i].y_offset = 0;
+                if (FT_HAS_KERNING(font->face) && last_index &&
+                    (*glyph_info)[i].index) {
+                    FT_Vector delta;
+                    if (FT_Get_Kerning(
+                            font->face,
+                            last_index,
+                            (*glyph_info)[i].index,
+                            ft_kerning_default,
+                            &delta) == 0) {
+                        (*glyph_info)[i - 1].x_advance += PIXEL(delta.x);
+                        (*glyph_info)[i - 1].y_advance += PIXEL(delta.y);
+                    }
+                }
+
+                (*glyph_info)[i].x_advance = glyph->metrics.horiAdvance;
+                // y_advance is only used in ttb, which is not supported by basic layout
+                (*glyph_info)[i].y_advance = 0;
+                last_index = (*glyph_info)[i].index;
+                (*glyph_info)[i].cluster = ch;
+            }
+        }
+    }
+    return count;
+}
+
+static size_t
 text_layout(
     PyObject *string,
     FontObject *self,
@@ -502,7 +738,7 @@ text_layout(
 }
 
 static PyObject *
-font_getlength(FontObject *self, PyObject *args) {
+text_getlength(void *self, int is_font_family, PyObject *args) {
     int length;                   /* length along primary axis, in 26.6 precision */
     GlyphInfo *glyph_info = NULL; /* computed text layout */
     size_t i, count;              /* glyph_info index and length */
@@ -527,7 +763,20 @@ font_getlength(FontObject *self, PyObject *args) {
     mask = mode && strcmp(mode, "1") == 0;
     color = mode && strcmp(mode, "RGBA") == 0;
 
-    count = text_layout(string, self, dir, features, lang, &glyph_info, mask, color);
+    if (is_font_family) {
+        count = text_layout_family(
+            string,
+            (FontFamilyObject *)self,
+            dir,
+            features,
+            lang,
+            &glyph_info,
+            mask,
+            color);
+    } else {
+        count = text_layout(
+            string, (FontObject *)self, dir, features, lang, &glyph_info, mask, color);
+    }
     if (PyErr_Occurred()) {
         return NULL;
     }
@@ -549,25 +798,49 @@ font_getlength(FontObject *self, PyObject *args) {
     return PyLong_FromLong(length);
 }
 
+static PyObject *
+font_getlength(FontObject *self, PyObject *args) {
+    return text_getlength(self, 0, args);
+}
+
+static PyObject *
+family_getlength(FontFamilyObject *self, PyObject *args) {
+    return text_getlength(self, 1, args);
+}
+
 static int
-bounding_box_and_anchors(FT_Face face, const char *anchor, int horizontal_dir, GlyphInfo *glyph_info, size_t count, int load_flags, int *width, int *height, int *x_offset, int *y_offset) {
+bounding_box_and_anchors(void *self, int is_font_family, const char *anchor, int horizontal_dir, GlyphInfo *glyph_info, size_t count, int load_flags, int *width, int *height, int *x_offset, int *y_offset) {
     int position; /* pen position along primary axis, in 26.6 precision */
     int advanced; /* pen position along primary axis, in pixels */
     int px, py;   /* position of current glyph, in pixels */
     int x_min, x_max, y_min, y_max; /* text bounding box, in pixels */
     int x_anchor, y_anchor;         /* offset of point drawn at (0, 0), in pixels */
     int error;
+    FT_Face face;
+    FT_Face primaryFace;
     FT_Glyph glyph;
     FT_BBox bbox;                   /* glyph bounding box */
     size_t i;                       /* glyph_info index */
+
+    if (is_font_family) {
+        FontFamilyObject *family = (FontFamilyObject *)self;
+        primaryFace = family->fonts->face;
+    } else {
+        FontObject *font = (FontObject *)self;
+        primaryFace = font->face;
+    }
+
     /*
      * text bounds are given by:
      *   - bounding boxes of individual glyphs
      *   - pen line, i.e. 0 to `advanced` along primary axis
      *     this means point (0, 0) is part of the text bounding box
      */
+    face = NULL;
     position = x_min = x_max = y_min = y_max = 0;
     for (i = 0; i < count; i++) {
+        face = glyph_info[i].face;
+
         if (horizontal_dir) {
             px = PIXEL(position + glyph_info[i].x_offset);
             py = PIXEL(glyph_info[i].y_offset);
@@ -647,15 +920,15 @@ bounding_box_and_anchors(FT_Face face, const char *anchor, int horizontal_dir, G
             }
             switch (anchor[1]) {
                 case 'a':  // ascender
-                    y_anchor = PIXEL(face->size->metrics.ascender);
+                    y_anchor = PIXEL(primaryFace->size->metrics.ascender);
                     break;
                 case 't':  // top
                     y_anchor = y_max;
                     break;
                 case 'm':  // middle (ascender + descender) / 2
                     y_anchor = PIXEL(
-                        (face->size->metrics.ascender +
-                         face->size->metrics.descender) /
+                        (primaryFace->size->metrics.ascender +
+                         primaryFace->size->metrics.descender) /
                         2);
                     break;
                 case 's':  // horizontal baseline
@@ -665,7 +938,7 @@ bounding_box_and_anchors(FT_Face face, const char *anchor, int horizontal_dir, G
                     y_anchor = y_min;
                     break;
                 case 'd':  // descender
-                    y_anchor = PIXEL(face->size->metrics.descender);
+                    y_anchor = PIXEL(primaryFace->size->metrics.descender);
                     break;
                 default:
                     goto bad_anchor;
@@ -717,7 +990,7 @@ bad_anchor:
 }
 
 static PyObject *
-font_getsize(FontObject *self, PyObject *args) {
+text_getsize(void *self, int is_font_family, PyObject *args) {
     int width, height, x_offset, y_offset;
     int load_flags;               /* FreeType load_flags parameter */
     int error;
@@ -745,7 +1018,15 @@ font_getsize(FontObject *self, PyObject *args) {
     mask = mode && strcmp(mode, "1") == 0;
     color = mode && strcmp(mode, "RGBA") == 0;
 
-    count = text_layout(string, self, dir, features, lang, &glyph_info, mask, color);
+    if (is_font_family) {
+        FontFamilyObject *family = (FontFamilyObject *)self;
+        count = text_layout_family(
+            string, family, dir, features, lang, &glyph_info, mask, color);
+    } else {
+        FontObject *font = (FontObject *) self;
+        count = text_layout(
+            string, font, dir, features, lang, &glyph_info, mask, color);
+    }
     if (PyErr_Occurred()) {
         return NULL;
     }
@@ -758,7 +1039,7 @@ font_getsize(FontObject *self, PyObject *args) {
         load_flags |= FT_LOAD_COLOR;
     }
 
-    error = bounding_box_and_anchors(self->face, anchor, horizontal_dir, glyph_info, count, load_flags, &width, &height, &x_offset, &y_offset);
+    error = bounding_box_and_anchors(self, is_font_family, anchor, horizontal_dir, glyph_info, count, load_flags, &width, &height, &x_offset, &y_offset);
     if (glyph_info) {
         PyMem_Free(glyph_info);
         glyph_info = NULL;
@@ -776,12 +1057,23 @@ font_getsize(FontObject *self, PyObject *args) {
 }
 
 static PyObject *
-font_render(FontObject *self, PyObject *args) {
+font_getsize(FontObject *self, PyObject *args) {
+    return text_getsize(self, 0, args);
+}
+
+static PyObject *
+family_getsize(FontFamilyObject *self, PyObject *args) {
+    return text_getsize(self, 1, args);
+}
+
+static PyObject *
+text_render(void *self, int is_font_family, PyObject *args) {
     int x, y;         /* pen position, in 26.6 precision */
     int px, py;       /* position of current glyph, in pixels */
     int x_min, y_max; /* text offset in 26.6 precision */
     int load_flags;   /* FreeType load_flags parameter */
     int error;
+    FT_Face face;
     FT_Glyph glyph;
     FT_GlyphSlot glyph_slot;
     FT_Bitmap bitmap;
@@ -841,20 +1133,45 @@ font_render(FontObject *self, PyObject *args) {
 
     foreground_ink = foreground_ink_long;
 
+    if (is_font_family) {
+        FontFamilyObject *family = (FontFamilyObject *)self;
+
 #ifdef FT_COLOR_H
-    if (color) {
-        FT_Color foreground_color;
-        FT_Byte *ink = (FT_Byte *)&foreground_ink;
-        foreground_color.red = ink[0];
-        foreground_color.green = ink[1];
-        foreground_color.blue = ink[2];
-        foreground_color.alpha =
-            (FT_Byte)255; /* ink alpha is handled in ImageDraw.text */
-        FT_Palette_Set_Foreground_Color(self->face, foreground_color);
-    }
+        for (int i = 0; i < family->font_count; i++) {
+            if (color) {
+                FT_Color foreground_color;
+                FT_Byte *ink = (FT_Byte *)&foreground_ink;
+                foreground_color.red = ink[0];
+                foreground_color.green = ink[1];
+                foreground_color.blue = ink[2];
+                foreground_color.alpha =
+                    (FT_Byte)255; /* ink alpha is handled in ImageDraw.text */
+                FT_Palette_Set_Foreground_Color(family->fonts[i].face, foreground_color);
+            }
+        }
 #endif
 
-    count = text_layout(string, self, dir, features, lang, &glyph_info, mask, color);
+        count =
+            text_layout_family(string, family, dir, features, lang, &glyph_info, mask, color);
+    } else {
+        FontObject *font = (FontObject *)self;
+
+#ifdef FT_COLOR_H
+        if (color) {
+            FT_Color foreground_color;
+            FT_Byte *ink = (FT_Byte *)&foreground_ink;
+            foreground_color.red = ink[0];
+            foreground_color.green = ink[1];
+            foreground_color.blue = ink[2];
+            foreground_color.alpha =
+                (FT_Byte)255; /* ink alpha is handled in ImageDraw.text */
+            FT_Palette_Set_Foreground_Color(font->face, foreground_color);
+        }
+#endif
+
+        count =
+            text_layout(string, font, dir, features, lang, &glyph_info, mask, color);
+    }
     if (PyErr_Occurred()) {
         return NULL;
     }
@@ -869,7 +1186,7 @@ font_render(FontObject *self, PyObject *args) {
 
     horizontal_dir = dir && strcmp(dir, "ttb") == 0 ? 0 : 1;
 
-    error = bounding_box_and_anchors(self->face, anchor, horizontal_dir, glyph_info, count, load_flags, &width, &height, &x_offset, &y_offset);
+    error = bounding_box_and_anchors(self, is_font_family, anchor, horizontal_dir, glyph_info, count, load_flags, &width, &height, &x_offset, &y_offset);
     if (error) {
         PyMem_Del(glyph_info);
         return NULL;
@@ -921,14 +1238,15 @@ font_render(FontObject *self, PyObject *args) {
         px = PIXEL(x + glyph_info[i].x_offset);
         py = PIXEL(y + glyph_info[i].y_offset);
 
+        face = glyph_info[i].face;
         error =
-            FT_Load_Glyph(self->face, glyph_info[i].index, load_flags | FT_LOAD_RENDER);
+            FT_Load_Glyph(face, glyph_info[i].index, load_flags | FT_LOAD_RENDER);
         if (error) {
             geterror(error);
             goto glyph_error;
         }
 
-        glyph_slot = self->face->glyph;
+        glyph_slot = face->glyph;
         bitmap = glyph_slot->bitmap;
 
         if (glyph_slot->bitmap_top + py > y_max) {
@@ -954,13 +1272,14 @@ font_render(FontObject *self, PyObject *args) {
         px = PIXEL(x + glyph_info[i].x_offset);
         py = PIXEL(y + glyph_info[i].y_offset);
 
-        error = FT_Load_Glyph(self->face, glyph_info[i].index, load_flags);
+        face = glyph_info[i].face;
+        error = FT_Load_Glyph(face, glyph_info[i].index, load_flags);
         if (error) {
             geterror(error);
             goto glyph_error;
         }
 
-        glyph_slot = self->face->glyph;
+        glyph_slot = face->glyph;
         if (stroker != NULL) {
             error = FT_Get_Glyph(glyph_slot, &glyph);
             if (!error) {
@@ -1147,6 +1466,16 @@ glyph_error:
     return NULL;
 }
 
+static PyObject *
+font_render(FontObject *self, PyObject *args) {
+    return text_render(self, 0, args);
+}
+
+static PyObject *
+family_render(FontFamilyObject *self, PyObject *args) {
+    return text_render(self, 1, args);
+}
+
 #if FREETYPE_MAJOR > 2 || (FREETYPE_MAJOR == 2 && FREETYPE_MINOR > 9) || \
     (FREETYPE_MAJOR == 2 && FREETYPE_MINOR == 9 && FREETYPE_PATCH == 1)
 static PyObject *
@@ -1299,7 +1628,7 @@ font_setvaraxes(FontObject *self, PyObject *args) {
     }
 
     num_coords = PyObject_Length(axes);
-    coords = (FT_Fixed*)malloc(num_coords * sizeof(FT_Fixed));
+    coords = (FT_Fixed *)malloc(num_coords * sizeof(FT_Fixed));
     if (coords == NULL) {
         return PyErr_NoMemory();
     }
@@ -1444,8 +1773,74 @@ static PyTypeObject Font_Type = {
     font_getsetters,          /*tp_getset*/
 };
 
+static void
+family_dealloc(FontFamilyObject *self) {
+    FontFamilyFont *font = self->fonts;
+    for (int i = 0; i < self->font_count; ++i, ++font) {
+        if (font->face) {
+            FT_Done_Face(font->face);
+        }
+        if (font->font_bytes) {
+            PyMem_Free(font->font_bytes);
+        }
+    }
+    PyMem_Free(self->fonts);
+    PyObject_Del(self);
+}
+
+static PyMethodDef family_methods[] = {
+    {"render", (PyCFunction)family_render, METH_VARARGS},
+    {"getsize", (PyCFunction)family_getsize, METH_VARARGS},
+    {"getlength", (PyCFunction)family_getlength, METH_VARARGS},
+/* TODO
+#if FREETYPE_MAJOR > 2 || (FREETYPE_MAJOR == 2 && FREETYPE_MINOR > 9) || \
+    (FREETYPE_MAJOR == 2 && FREETYPE_MINOR == 9 && FREETYPE_PATCH == 1)
+    {"getvarnames", (PyCFunction)font_getvarnames, METH_NOARGS},
+    {"getvaraxes", (PyCFunction)font_getvaraxes, METH_NOARGS},
+    {"setvarname", (PyCFunction)font_setvarname, METH_VARARGS},
+    {"setvaraxes", (PyCFunction)font_setvaraxes, METH_VARARGS},
+#endif
+*/
+    {NULL, NULL}};
+
+
+static PyTypeObject FontFamily_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0) "FontFamily",
+    sizeof(FontObject),
+    0,
+    /* methods */
+    (destructor)family_dealloc, /* tp_dealloc */
+    0,                          /* tp_print */
+    0,                          /*tp_getattr*/
+    0,                          /*tp_setattr*/
+    0,                          /*tp_compare*/
+    0,                          /*tp_repr*/
+    0,                          /*tp_as_number */
+    0,                          /*tp_as_sequence */
+    0,                          /*tp_as_mapping */
+    0,                          /*tp_hash*/
+    0,                          /*tp_call*/
+    0,                          /*tp_str*/
+    0,                          /*tp_getattro*/
+    0,                          /*tp_setattro*/
+    0,                          /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,         /*tp_flags*/
+    0,                          /*tp_doc*/
+    0,                          /*tp_traverse*/
+    0,                          /*tp_clear*/
+    0,                          /*tp_richcompare*/
+    0,                          /*tp_weaklistoffset*/
+    0,                          /*tp_iter*/
+    0,                          /*tp_iternext*/
+    family_methods,             /*tp_methods*/
+    0,                          /*tp_members*/
+    0,                          /*TODO tp_getset*/
+};
+
 static PyMethodDef _functions[] = {
-    {"getfont", (PyCFunction)getfont, METH_VARARGS | METH_KEYWORDS}, {NULL, NULL}};
+    {"getfont", (PyCFunction)getfont, METH_VARARGS | METH_KEYWORDS},
+    {"getfamily", (PyCFunction)getfamily, METH_VARARGS | METH_KEYWORDS},
+    {NULL, NULL}};
 
 static int
 setup_module(PyObject *m) {
@@ -1457,6 +1852,7 @@ setup_module(PyObject *m) {
 
     /* Ready object type */
     PyType_Ready(&Font_Type);
+    PyType_Ready(&FontFamily_Type);
 
     if (FT_Init_FreeType(&library)) {
         return 0; /* leave it uninitialized */
