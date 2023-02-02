@@ -48,11 +48,6 @@ jobs:
       - name: Install dependencies
         run: |
           pacman -S --noconfirm \
-              ${{ matrix.package }}-python3-cffi \
-              ${{ matrix.package }}-python3-numpy \
-              ${{ matrix.package }}-python3-olefile \
-              ${{ matrix.package }}-python3-pip \
-              ${{ matrix.package }}-python3-setuptools \
               ${{ matrix.package }}-freetype \
               ${{ matrix.package }}-gcc \
               ${{ matrix.package }}-ghostscript \
@@ -63,6 +58,11 @@ jobs:
               ${{ matrix.package }}-libtiff \
               ${{ matrix.package }}-libwebp \
               ${{ matrix.package }}-openjpeg2 \
+              ${{ matrix.package }}-python3-cffi \
+              ${{ matrix.package }}-python3-numpy \
+              ${{ matrix.package }}-python3-olefile \
+              ${{ matrix.package }}-python3-pip \
+              ${{ matrix.package }}-python3-setuptools \
               subversion
 
           if [[ ${{ matrix.msystem }} =~ "64" ]]; then
