@@ -44,6 +44,10 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pacman -S --noconfirm \
+              pactoys \
+              subversion
+
           pacboy -S --noconfirm \
               freetype:p \
               gcc:p \
@@ -59,8 +63,7 @@ jobs:
               python3-numpy:p \
               python3-olefile:p \
               python3-pip:p \
-              python3-setuptools:p \
-              subversion:
+              python3-setuptools:p
 
           if [[ ${{ matrix.msystem }} =~ "64" ]]; then
               pacboy -S --noconfirm \
