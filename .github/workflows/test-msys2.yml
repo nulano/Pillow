@@ -44,9 +44,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pacman -S --noconfirm \
-              pactoys \
-              subversion
+          pacman -S --noconfirm pactoys
 
           pacboy -S --noconfirm \
               freetype:p \

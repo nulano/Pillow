@@ -109,9 +109,9 @@ header = [
 deps = {
     "libjpeg": {
         "url": SF_PROJECTS
-        + "/libjpeg-turbo/files/2.1.5/libjpeg-turbo-2.1.5.tar.gz/download",
-        "filename": "libjpeg-turbo-2.1.5.tar.gz",
-        "dir": "libjpeg-turbo-2.1.5",
+        + "/libjpeg-turbo/files/2.1.5.1/libjpeg-turbo-2.1.5.1.tar.gz/download",
+        "filename": "libjpeg-turbo-2.1.5.1.tar.gz",
+        "dir": "libjpeg-turbo-2.1.5.1",
         "license": ["README.ijg", "LICENSE.md"],
         "license_pattern": (
             "(LEGAL ISSUES\n============\n\n.+?)\n\nREFERENCES\n=========="
@@ -253,9 +253,9 @@ deps = {
         "libs": ["*.lib"],
     },
     "freetype": {
-        "url": "https://download.savannah.gnu.org/releases/freetype/freetype-2.12.1.tar.gz",  # noqa: E501
-        "filename": "freetype-2.12.1.tar.gz",
-        "dir": "freetype-2.12.1",
+        "url": "https://download.savannah.gnu.org/releases/freetype/freetype-2.13.0.tar.gz",  # noqa: E501
+        "filename": "freetype-2.13.0.tar.gz",
+        "dir": "freetype-2.13.0",
         "license": ["LICENSE.TXT", r"docs\FTL.TXT", r"docs\GPLv2.TXT"],
         "patch": {
             r"builds\windows\vc2010\freetype.vcxproj": {
