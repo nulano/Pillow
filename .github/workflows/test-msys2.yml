@@ -31,7 +31,7 @@ jobs:
       MSYSTEM: ${{ matrix.msystem }}
       CHERE_INVOKING: 1
 
-    timeout-minutes: 30
+    timeout-minutes: 60
     name: MSYS2 ${{ matrix.msystem }}
 
     steps:
@@ -80,6 +80,9 @@ jobs:
 
       - name: After success
         run: .ci/after_success.sh
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
