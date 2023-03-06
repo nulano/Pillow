@@ -71,6 +71,8 @@ def cmds_cmake(target, *params):
                 "-DCMAKE_CXX_COMPILER=cl.exe",  # for Ninja
                 "-DCMAKE_C_FLAGS=-nologo",
                 "-DCMAKE_CXX_FLAGS=-nologo",
+                '-DCMAKE_STATIC_LINKER_FLAGS="-nologo /machine:{architecture}"',
+                "-DCMAKE_POLICY_DEFAULT_CMP0091=NEW",  # more reliable way to use /MD
                 *params,
                 '-G "{cmake_generator}"',
                 ".",
@@ -151,6 +153,21 @@ deps = {
         "headers": [r"z*.h"],
         "libs": [r"*.lib"],
     },
+    "libdeflate": {
+        "url": "https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.17.tar.gz",
+        "filename": "libdeflate-1.17.tar.gz",
+        "dir": "libdeflate-1.17",
+        "license": "COPYING",
+        "build": [
+            *cmds_cmake(
+                "libdeflate_static",
+                "-DLIBDEFLATE_BUILD_SHARED_LIB:BOOL=OFF",
+                "-DLIBDEFLATE_BUILD_GZIP:BOOL=OFF",
+            ),
+        ],
+        "headers": [r"libdeflate.h"],
+        "libs": [r"deflatestatic.lib"],
+    },
     "xz": {
         "url": SF_PROJECTS + "/lzmautils/files/xz-5.4.1.tar.gz/download",
         "filename": "xz-5.4.1.tar.gz",
@@ -200,6 +217,10 @@ deps = {
             r"libtiff\tif_webp.c": {
                 # link against webp.lib
                 "#ifdef WEBP_SUPPORT": '#ifdef WEBP_SUPPORT\n#pragma comment(lib, "webp.lib")',  # noqa: E501
+            },
+            r"libtiff\tif_zip.c": {
+                # link against deflatestatic.lib
+                "#ifdef ZIP_SUPPORT": '#ifdef ZIP_SUPPORT\n#pragma comment(lib, "deflatestatic.lib")',  # noqa: E501
             },
         },
         "build": [
