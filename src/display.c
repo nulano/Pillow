@@ -319,7 +319,7 @@ PyObject *
 PyImaging_GrabScreenWin32(PyObject *self, PyObject *args) {
     int x = 0, y = 0, width, height;
     int includeLayeredWindows = 0, all_screens = 0;
-    HBITMAP bitmap;
+    HBITMAP bitmap = NULL;
     BITMAPCOREHEADER core;
     HDC screen, screen_copy;
     DWORD rop;
@@ -367,10 +367,13 @@ PyImaging_GrabScreenWin32(PyObject *self, PyObject *args) {
 
     bitmap = CreateCompatibleBitmap(screen, width, height);
     if (!bitmap) {
+        PyErr_Format(
+            PyExc_OSError, "CreateCompatibleBitmap failed: 0x%x", GetLastError());
         goto error;
     }
 
     if (!SelectObject(screen_copy, bitmap)) {
+        PyErr_Format(PyExc_OSError, "SelectObject failed: 0x%x", GetLastError());
         goto error;
     }
 
@@ -381,6 +384,7 @@ PyImaging_GrabScreenWin32(PyObject *self, PyObject *args) {
         rop |= CAPTUREBLT;
     }
     if (!BitBlt(screen_copy, 0, 0, width, height, screen, x, y, rop)) {
+        PyErr_Format(PyExc_OSError, "BitBlt failed: 0x%x", GetLastError());
         goto error;
     }
 
@@ -388,7 +392,7 @@ PyImaging_GrabScreenWin32(PyObject *self, PyObject *args) {
 
     buffer = PyBytes_FromStringAndSize(NULL, height * ((width * 3 + 3) & -4));
     if (!buffer) {
-        return NULL;
+        goto error;
     }
 
     core.bcSize = sizeof(core);
@@ -404,6 +408,7 @@ PyImaging_GrabScreenWin32(PyObject *self, PyObject *args) {
             PyBytes_AS_STRING(buffer),
             (BITMAPINFO *)&core,
             DIB_RGB_COLORS)) {
+        PyErr_Format(PyExc_OSError, "GetDIBits failed: 0x%x", GetLastError());
         goto error;
     }
 
@@ -414,8 +419,9 @@ PyImaging_GrabScreenWin32(PyObject *self, PyObject *args) {
     return Py_BuildValue("(ii)(ii)N", x, y, width, height, buffer);
 
 error:
-    PyErr_SetString(PyExc_OSError, "screen grab failed");
-
+    if (bitmap != NULL) {
+        DeleteObject(bitmap);
+    }
     DeleteDC(screen_copy);
     DeleteDC(screen);
 
