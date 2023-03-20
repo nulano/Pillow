@@ -168,6 +168,23 @@ deps = {
         "headers": [r"libdeflate.h"],
         "libs": [r"deflatestatic.lib"],
     },
+    "zstd": {
+        "url": "https://github.com/facebook/zstd/archive/refs/tags/v1.5.4.tar.gz",
+        "filename": "zstd-1.5.4.tar.gz",
+        "dir": "zstd-1.5.4",
+        "license": "LICENSE",  # BSD, or use COPYING if you prefer GPLv2
+        "build": [
+            cmd_cd(r"{dir_zstd}\build\cmake"),
+            *cmds_cmake(
+                "libzstd_static",
+                "-DZSTD_BUILD_SHARED:BOOL=OFF",
+                "-DZSTD_BUILD_PROGRAMS:BOOL=OFF",
+            ),
+            cmd_cd(r"{dir_zstd}"),
+        ],
+        "headers": [r"lib\zstd.h", r"lib\zstd_errors.h"],
+        "libs": [r"build\cmake\lib\zstd_static.lib"],
+    },
     "xz": {
         "url": SF_PROJECTS + "/lzmautils/files/xz-5.4.1.tar.gz/download",
         "filename": "xz-5.4.1.tar.gz",
@@ -221,6 +238,10 @@ deps = {
             r"libtiff\tif_zip.c": {
                 # link against deflatestatic.lib
                 "#ifdef ZIP_SUPPORT": '#ifdef ZIP_SUPPORT\n#pragma comment(lib, "deflatestatic.lib")',  # noqa: E501
+            },
+            r"libtiff\tif_zstd.c": {
+                # link against zstd_static.lib
+                "#ifdef ZSTD_SUPPORT": '#ifdef ZSTD_SUPPORT\n#pragma comment(lib, "zstd_static.lib")',  # noqa: E501
             },
         },
         "build": [

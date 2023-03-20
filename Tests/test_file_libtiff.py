@@ -840,6 +840,29 @@ class TestFileLibTiff(LibTiffTestCase):
             sys.stderr.write(captured.err)
             raise
 
+    def test_zstd(self, capfd):
+        try:
+            with Image.open("Tests/images/hopper_zstd.tif") as im:
+                assert im.mode == "RGB"
+                assert im.size == (128, 128)
+                assert im.format == "TIFF"
+                im2 = hopper()
+                assert_image_similar(im, im2, 5)
+        except OSError:
+            captured = capfd.readouterr()
+            if "ZSTD compression support is not configured" in captured.err:
+                pytest.skip("ZSTD compression support is not configured")
+            if (
+                "Compression scheme 50000 strip decoding is not implemented"
+                in captured.err
+            ):
+                pytest.skip(
+                    "Compression scheme 50000 strip decoding is not implemented"
+                )
+            sys.stdout.write(captured.out)
+            sys.stderr.write(captured.err)
+            raise
+
     def test_webp(self, capfd):
         try:
             with Image.open("Tests/images/hopper_webp.tif") as im:

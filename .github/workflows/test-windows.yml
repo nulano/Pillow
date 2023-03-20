@@ -103,6 +103,10 @@ jobs:
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: "& winbuild\\build\\build_dep_libdeflate.cmd"
 
+    - name: Build dependencies / zstd
+      if: steps.build-cache.outputs.cache-hit != 'true'
+      run: "& winbuild\\build\\build_dep_zstd.cmd"
+
     - name: Build dependencies / xz
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: "& winbuild\\build\\build_dep_xz.cmd"
