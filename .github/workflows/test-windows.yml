@@ -163,6 +163,10 @@ jobs:
       run: rmdir /S /Q winbuild\build\src
       shell: cmd
 
+    - name: Setup tmate session
+      if: failure()
+      uses: mxschmitt/action-tmate@v3
+
     - name: Build Pillow
       run: |
         $FLAGS=""
