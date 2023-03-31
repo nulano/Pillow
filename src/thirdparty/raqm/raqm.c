@@ -34,6 +34,11 @@
 #else
 #ifdef HAVE_FRIBIDI_SYSTEM
 #include <fribidi.h>
+#if FRIBIDI_MAJOR_VERSION < 1 || (FRIBIDI_MAJOR_VERSION == 1 || \
+                                  FRIBIDI_MINOR_VERSION == 0 || \
+                                  FRIBIDI_MICRO_VERSION < 6)
+#error Vendored Raqm requires FriBiDi 1.0.6 or later, or --vendor-fribidi.
+#endif
 #else
 #include "../fribidi-shim/fribidi.h"
 #endif
@@ -41,8 +46,14 @@
 
 #include <hb.h>
 #include <hb-ft.h>
+#if !HB_VERSION_ATLEAST(3, 0, 0)
+#error Vendored Raqm requires HarfBuzz 3.0.0 or later.
+#endif
 
 #include "raqm.h"
+#if FREETYPE_MAJOR < 2 || (FREETYPE_MAJOR == 2 && FREETYPE_MINOR < 11)
+#error Vendored Raqm requires FreeType 2.11.0 or later.
+#endif
 
 /**
  * SECTION:raqm
