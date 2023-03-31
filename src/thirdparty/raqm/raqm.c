@@ -34,8 +34,8 @@
 #else
 #ifdef HAVE_FRIBIDI_SYSTEM
 #include <fribidi.h>
-#if FRIBIDI_MAJOR_VERSION < 1 || (FRIBIDI_MAJOR_VERSION == 1 || \
-                                  FRIBIDI_MINOR_VERSION == 0 || \
+#if FRIBIDI_MAJOR_VERSION < 1 || (FRIBIDI_MAJOR_VERSION == 1 && \
+                                  FRIBIDI_MINOR_VERSION == 0 && \
                                   FRIBIDI_MICRO_VERSION < 6)
 #error Vendored Raqm requires FriBiDi 1.0.6 or later, or --vendor-fribidi.
 #endif
