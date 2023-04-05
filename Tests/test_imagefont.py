@@ -305,17 +305,18 @@ def test_rotated_transposed_font(font, orientation):
     draw.font = transposed_font
     bbox_b = draw.textbbox((20, 20), word)
 
+    # Check top-left point of box b is (20, 20)
+    assert bbox_b[0] == 20
+    assert bbox_b[1] == 20
+
     # Check (w,h) of box a is (h,w) of box b
-    assert (bbox_a[2] - bbox_a[0], bbox_a[3] - bbox_a[1]) == (
+    assert (
+        bbox_a[2] - bbox_a[0],
+        bbox_a[3] - bbox_a[1],
+    ) == (
         bbox_b[3] - bbox_b[1],
         bbox_b[2] - bbox_b[0],
     )
-
-    # Check bbox b is (20, 20, 20 + h, 20 + w)
-    assert bbox_b[0] == 20
-    assert bbox_b[1] == 20
-    assert bbox_b[2] == 20 + bbox_a[3] - bbox_a[1]
-    assert bbox_b[3] == 20 + bbox_a[2] - bbox_a[0]
 
     # text length is undefined for vertical text
     with pytest.raises(ValueError):
@@ -348,17 +349,18 @@ def test_unrotated_transposed_font(font, orientation):
     bbox_b = draw.textbbox((20, 20), word)
     length_b = draw.textlength(word)
 
+    # Check top-left point of box b is (20, 20)
+    assert bbox_b[0] == 20
+    assert bbox_b[1] == 20
+
     # Check boxes a and b are same size
-    assert (bbox_a[2] - bbox_a[0], bbox_a[3] - bbox_a[1]) == (
+    assert (
+        bbox_a[2] - bbox_a[0],
+        bbox_a[3] - bbox_a[1],
+    ) == (
         bbox_b[2] - bbox_b[0],
         bbox_b[3] - bbox_b[1],
     )
-
-    # Check bbox b is (20, 20, 20 + w, 20 + h)
-    assert bbox_b[0] == 20
-    assert bbox_b[1] == 20
-    assert bbox_b[2] == 20 + bbox_a[2] - bbox_a[0]
-    assert bbox_b[3] == 20 + bbox_a[3] - bbox_a[1]
 
     assert length_a == length_b
 
