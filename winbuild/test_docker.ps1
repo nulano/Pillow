@@ -5,7 +5,7 @@ $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 if ($python -like "pypy*") {
     Invoke-WebRequest -Uri 'https://aka.ms/vs/15/release/vc_redist.x64.exe' -OutFile 'vc_redist.x64.exe'
-    & C:\vc_redist.x64.exe /install /quiet /norestart
+    C:\vc_redist.x64.exe /install /quiet /norestart | Out-Null
     $url = 'https://downloads.python.org/pypy/{0}-v7.3.13-win64.zip' -f $python
     echo "Downloading $url"
     Invoke-WebRequest -Uri $url -OutFile 'pypy.zip'
