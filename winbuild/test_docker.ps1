@@ -2,7 +2,7 @@ param ([string]$python)
 $ErrorActionPreference  = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 if ($python -like "pypy*") {
-    $url = 'https://downloads.python.org/pypy/{0}-v7.3.11-win64.zip' -f $python
+    $url = 'https://downloads.python.org/pypy/{0}-v7.3.13-win64.zip' -f $python
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Invoke-WebRequest -Uri 'https://aka.ms/vs/15/release/vc_redist.x64.exe' -OutFile 'vc_redist.x64.exe'
     & C:\vc_redist.x64.exe /install /quiet /norestart
@@ -29,6 +29,7 @@ $env:path += ";C:\Python\;C:\pillow\winbuild\build\bin\"
 cd C:\pillow
 & python -VV
 & python -m ensurepip
+& python -m pip install -U pip
 & python -m pip install pytest pytest-timeout
 & python -m pip install "$(Get-ChildItem *.whl -Name)"
 & python -m pytest -vx Tests\check_wheel.py Tests
