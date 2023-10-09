@@ -36,4 +36,5 @@ echo "Running test"
 & python -m pip install pytest pytest-timeout
 & python -m pip install "$(Get-ChildItem *.whl -Name)"
 & python -m pytest -vx Tests\check_wheel.py Tests
+echo $LASTEXITCODE
 if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit $LASTEXITCODE }
