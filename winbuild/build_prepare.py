@@ -101,9 +101,21 @@ def cmd_msbuild(
 SF_PROJECTS = "https://sourceforge.net/projects"
 
 ARCHITECTURES = {
-    "x86": {"vcvars_arch": "x86", "msbuild_arch": "Win32"},
-    "x64": {"vcvars_arch": "x86_amd64", "msbuild_arch": "x64"},
-    "ARM64": {"vcvars_arch": "x86_arm64", "msbuild_arch": "ARM64"},
+    "x86": {
+        "vcvars_arch": "x86",
+        "msbuild_arch": "Win32",
+        "rust_arch": "i686-pc-windows-msvc",
+    },
+    "x64": {
+        "vcvars_arch": "x86_amd64",
+        "msbuild_arch": "x64",
+        "rust_arch": "x86_64-pc-windows-msvc",
+    },
+    "ARM64": {
+        "vcvars_arch": "x86_arm64",
+        "msbuild_arch": "ARM64",
+        "rust_arch": "aarch64-pc-windows-msvc",
+    },
 }
 
 # dependencies, listed in order of compilation
@@ -318,22 +330,18 @@ DEPS = {
         "libs": [r"bin\*.lib"],
     },
     "libimagequant": {
-        # commit: Merge branch 'master' into msvc (matches 2.17.0 tag)
-        "url": "https://github.com/ImageOptim/libimagequant/archive/e4c1334be0eff290af5e2b4155057c2953a313ab.zip",
-        "filename": "libimagequant-e4c1334be0eff290af5e2b4155057c2953a313ab.zip",
-        "dir": "libimagequant-e4c1334be0eff290af5e2b4155057c2953a313ab",
+        "url": "https://github.com/ImageOptim/libimagequant/archive/4.2.2.zip",
+        "filename": "libimagequant-4.2.2.zip",
+        "dir": "libimagequant-4.2.2",
         "license": "COPYRIGHT",
-        "patch": {
-            "CMakeLists.txt": {
-                "if(OPENMP_FOUND)": "if(false)",
-                "install": "#install",
-            }
-        },
         "build": [
-            *cmds_cmake("imagequant_a"),
-            cmd_copy("imagequant_a.lib", "imagequant.lib"),
+            cmd_cd("imagequant-sys"),
+            "cargo clean",
+            "cargo build --release --target={rust_arch}",
+            cmd_cd(".."),
+            r"lib /out:imagequant.lib target\{rust_arch}\release\imagequant_sys.lib Advapi32.lib bcrypt.lib ntdll.lib userenv.lib ws2_32.lib",  # noqa: E501
         ],
-        "headers": [r"*.h"],
+        "headers": [r"imagequant-sys\libimagequant.h"],
         "libs": [r"imagequant.lib"],
     },
     "harfbuzz": {
