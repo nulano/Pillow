@@ -993,6 +993,29 @@ def test_colr_mask(layout_engine):
     assert_image_similar_tofile(im, "Tests/images/colr_bungee_mask.png", 22)
 
 
+@skip_unless_feature_version("freetype2", "2.10.0")
+def test_colr_stroke(layout_engine):
+    font = ImageFont.truetype(
+        "Tests/fonts/BungeeColor-Regular_colr_Windows.ttf",
+        size=64,
+        layout_engine=layout_engine,
+    )
+
+    im = Image.new("RGB", (300, 75), "white")
+    d = ImageDraw.Draw(im)
+
+    d.text(
+        (15, 5),
+        "Bungee",
+        font=font,
+        embedded_color=True,
+        stroke_width=8,
+        stroke_fill="blue",
+    )
+
+    assert_image_similar_tofile(im, "Tests/images/colr_bungee_stroke.png", 7)
+
+
 def test_woff2(layout_engine):
     try:
         font = ImageFont.truetype(
