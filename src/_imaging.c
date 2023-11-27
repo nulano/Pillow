@@ -720,6 +720,7 @@ _radial_gradient(PyObject *self, PyObject *args) {
 
 static PyObject *
 _alpha_composite(ImagingObject *self, PyObject *args) {
+    int x;
     ImagingObject *imagep1;
     ImagingObject *imagep2;
 
