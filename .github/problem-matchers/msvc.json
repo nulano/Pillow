@@ -5,7 +5,7 @@
       "owner": "msvc-problem-matcher",
       "pattern": [
         {
-          "regexp": "^\\s*(?:\\d+\\>)?(\\S.*)\\((\\d+),?(\\d+)?(?:,\\d+,\\d+)?\\)\\s*:\\s+((?:fatal +)?error|warning|info)\\s+(\\w+\\d+)\\s*:\\s*(.*)$",
+          "regexp": "^\\s*(?:\\d+\\>)?(\\S.*)\\((\\d+),?(\\d+)?(?:,\\d+,\\d+)?\\)\\s*:\\s+((?:fatal +)?error|warning|info)\\s+((?!C4244)\\w+\\d+)\\s*:\\s*(.*)$",
           "file": 1,
           "line": 2,
           "column": 3,
