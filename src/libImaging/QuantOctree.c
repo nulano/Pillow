@@ -367,7 +367,7 @@ map_image_pixels(
     uint32_t nPixels,
     const ColorCube lookupCube,
     uint32_t *pixelArray) {
-    long i;
+    unsigned long i;
     for (i = 0; i < nPixels; i++) {
         pixelArray[i] = lookup_color(lookupCube, &pixelData[i]);
     }
@@ -393,7 +393,7 @@ quantize_octree(
     ColorBucket paletteBucketsFine = NULL;
     ColorBucket paletteBuckets = NULL;
     uint32_t *qp = NULL;
-    long i;
+    unsigned long i;
     unsigned long nCoarseColors, nFineColors, nAlreadySubtracted;
     const unsigned int *cubeBits;
 

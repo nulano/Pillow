@@ -1,5 +1,6 @@
 #include "Imaging.h"
 
+#define _USE_MATH_DEFINES
 #include <math.h>
 
 #define ROUND_UP(f) ((int)((f) >= 0.0 ? (f) + 0.5F : (f)-0.5F))
