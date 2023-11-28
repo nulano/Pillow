@@ -1,0 +1,19 @@
+{
+  "__comment": "Based on vscode's vs/workbench/contrib/tasks/common/problemMatcher.ts msCompile rule",
+  "problemMatcher": [
+    {
+      "owner": "msvc-problem-matcher",
+      "pattern": [
+        {
+          "regexp": "^\\s*(?:\\d+\\>)?(\\S.*)\\((\\d+),?(\\d+)?(?:,\\d+,\\d+)?\\)\\s*:\\s+((?:fatal +)?error|warning|info)\\s+(\\w+\\d+)\\s*:\\s*(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        }
+      ]
+    }
+  ]
+}
