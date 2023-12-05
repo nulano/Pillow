@@ -363,8 +363,8 @@ Methods
     :param font: An :py:class:`~PIL.ImageFont.ImageFont` instance.
     :param anchor: The text anchor alignment. Determines the relative location of
                    the anchor to the text. The default alignment is top left,
-                   specifically ``la`` for horizontal text with a TrueType font
-                   and ``lt`` otherwise. See :ref:`text-anchors` for details.
+                   specifically ``la`` for horizontal text and ``lt`` for
+                   vertical text. See :ref:`text-anchors` for details.
                    This parameter is ignored for non-TrueType fonts.
 
                     .. note:: This parameter was present in earlier versions
@@ -435,8 +435,8 @@ Methods
 
     :param anchor: The text anchor alignment. Determines the relative location of
                    the anchor to the text. The default alignment is top left,
-                   specifically ``la`` for horizontal text with a TrueType font
-                   and ``lt`` otherwise. See :ref:`text-anchors` for details.
+                   specifically ``la`` for horizontal text and ``lt`` for
+                   vertical text. See :ref:`text-anchors` for details.
                    This parameter is ignored for non-TrueType fonts.
 
                     .. note:: This parameter was present in earlier versions
@@ -579,8 +579,8 @@ Methods
     :param font: A :py:class:`~PIL.ImageFont.FreeTypeFont` instance.
     :param anchor: The text anchor alignment. Determines the relative location of
                    the anchor to the text. The default alignment is top left,
-                   specifically ``la`` for horizontal text with a TrueType font
-                   and ``lt`` otherwise. See :ref:`text-anchors` for details.
+                   specifically ``la`` for horizontal text and ``lt`` for
+                   vertical text. See :ref:`text-anchors` for details.
                    This parameter is ignored for non-TrueType fonts.
     :param spacing: If the text is passed on to
                     :py:meth:`~PIL.ImageDraw.ImageDraw.multiline_textbbox`,
@@ -634,8 +634,8 @@ Methods
     :param font: A :py:class:`~PIL.ImageFont.FreeTypeFont` instance.
     :param anchor: The text anchor alignment. Determines the relative location of
                    the anchor to the text. The default alignment is top left,
-                   specifically ``la`` for horizontal text with a TrueType font
-                   and ``lt`` otherwise. See :ref:`text-anchors` for details.
+                   specifically ``la`` for horizontal text and ``lt`` for
+                   vertical text. See :ref:`text-anchors` for details.
                    This parameter is ignored for non-TrueType fonts.
     :param spacing: The number of pixels between lines.
     :param align: ``"left"``, ``"center"`` or ``"right"``. Determines the relative alignment of lines.
