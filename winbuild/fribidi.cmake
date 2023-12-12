@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 project(fribidi)
 
+option(GEN "Generate sources instead of building FriBiDi")
+
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -30,7 +32,9 @@ function(fribidi_conf)
 	message("detected ${PACKAGE_NAME} version ${FRIBIDI_VERSION}")
 	configure_file(lib/fribidi-config.h.in lib/fribidi-config.h @ONLY)
 endfunction()
-fribidi_conf()
+if(GEN)
+    fribidi_conf()
+endif(GEN)
 
 
 function(prepend var prefix)
@@ -57,17 +61,19 @@ endmacro()
 
 function(fribidi_gen _NAME _OUTNAME _PARAM)
 	set(_OUT lib/${_OUTNAME})
-	prepend(_DEP "${CMAKE_CURRENT_SOURCE_DIR}/gen.tab/" ${ARGN})
-	add_executable(gen-${_NAME}
-		gen.tab/gen-${_NAME}.c
-		gen.tab/packtab.c)
-	fribidi_definitions(gen-${_NAME})
-	target_compile_definitions(gen-${_NAME}
-		PUBLIC DONT_HAVE_FRIBIDI_CONFIG_H)
-	add_custom_command(
-		COMMAND gen-${_NAME} ${_PARAM} ${_DEP} > ${_OUT}
-		DEPENDS ${_DEP}
-		OUTPUT ${_OUT})
+	if(GEN)
+        prepend(_DEP "${CMAKE_CURRENT_SOURCE_DIR}/gen.tab/" ${ARGN})
+        add_executable(gen-${_NAME}
+            gen.tab/gen-${_NAME}.c
+            gen.tab/packtab.c)
+        fribidi_definitions(gen-${_NAME})
+        target_compile_definitions(gen-${_NAME}
+            PUBLIC DONT_HAVE_FRIBIDI_CONFIG_H)
+        add_custom_command(
+            COMMAND gen-${_NAME} ${_PARAM} ${_DEP} > ${_OUT}
+            DEPENDS ${_DEP}
+            OUTPUT ${_OUT})
+    endif(GEN)
 	list(APPEND FRIBIDI_SOURCES_GENERATED "${_OUT}")
 	set(FRIBIDI_SOURCES_GENERATED ${FRIBIDI_SOURCES_GENERATED} PARENT_SCOPE)
 endfunction()
@@ -78,8 +84,10 @@ fribidi_gen(unicode-version fribidi-unicode-version.h ""
 
 macro(fribidi_tab _NAME)
 	fribidi_gen(${_NAME}-tab ${_NAME}.tab.i 2 ${ARGN})
-	target_sources(gen-${_NAME}-tab
-		PRIVATE lib/fribidi-unicode-version.h)
+	if(GEN)
+        target_sources(gen-${_NAME}-tab
+            PRIVATE lib/fribidi-unicode-version.h)
+	endif(GEN)
 endmacro()
 
 fribidi_tab(bidi-type unidata/UnicodeData.txt)
@@ -93,10 +101,14 @@ fribidi_tab(brackets-type unidata/BidiBrackets.txt)
 file(GLOB FRIBIDI_SOURCES lib/*.c)
 file(GLOB FRIBIDI_HEADERS lib/*.h)
 
-add_library(fribidi SHARED
-	${FRIBIDI_SOURCES}
-	${FRIBIDI_HEADERS}
-	${FRIBIDI_SOURCES_GENERATED})
-fribidi_definitions(fribidi)
-target_compile_definitions(fribidi
-	PUBLIC "-DFRIBIDI_BUILD")
+if(GEN)
+    add_custom_target(fribidi-gen DEPENDS ${FRIBIDI_SOURCES_GENERATED})
+else(GEN)
+    add_library(fribidi SHARED
+        ${FRIBIDI_SOURCES}
+        ${FRIBIDI_HEADERS}
+        ${FRIBIDI_SOURCES_GENERATED})
+    fribidi_definitions(fribidi)
+    target_compile_definitions(fribidi
+        PUBLIC "-DFRIBIDI_BUILD")
+endif(GEN)

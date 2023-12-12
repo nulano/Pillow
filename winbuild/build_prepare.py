@@ -367,7 +367,14 @@ DEPS = {
         "build": [
             cmd_copy(r"COPYING", r"{bin_dir}\fribidi-1.0.13-COPYING"),
             cmd_copy(r"{winbuild_dir}\fribidi.cmake", r"CMakeLists.txt"),
-            *cmds_cmake("fribidi"),
+            # when cross-compiling, the Unicode tables must be compiled separately
+            " ^&^& ".join(
+                [
+                    "cmd /c call {vcvarsall} x86",
+                    *cmds_cmake("fribidi-gen", "-DGEN=true"),
+                ]
+            ),
+            *cmds_cmake("fribidi", "-DGEN=false"),
         ],
         "bins": [r"*.dll"],
     },
@@ -706,11 +713,6 @@ if __name__ == "__main__":
     if args.no_imagequant:
         disabled += ["libimagequant"]
     if args.no_fribidi:
-        disabled += ["fribidi"]
-    elif args.architecture == "ARM64" and platform.machine() != "ARM64":
-        import warnings
-
-        warnings.warn("Cross-compiling FriBiDi is currently not supported, disabling")
         disabled += ["fribidi"]
 
     prefs = {
