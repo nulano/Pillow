@@ -164,6 +164,10 @@ jobs:
       run: rmdir /S /Q winbuild\build\src
       shell: cmd
 
+    - name: Register MSVC problem matcher
+      if: "matrix.python-version == '3.12'"
+      run: echo "::add-matcher::.github/problem-matchers/msvc.json"
+
     - name: Build Pillow
       run: |
         $FLAGS="-C raqm=vendor -C fribidi=vendor"
