@@ -213,16 +213,7 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Merge artifacts
         run: |
-          for artifact in macOS_x86_64 \
-                          macOS_arm64 \
-                          manylinux2014_musllinux \
-                          manylinux_2_28 \
-                          windows_x86 \
-                          windows_x64 \
-                          windows_ARM64 \
-                          sdist; do
-            mv $artifact/* .
-            rmdir $artifact
-          done
+          mkdir dist
+          mv */* dist
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
