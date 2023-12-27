@@ -121,7 +121,7 @@ getfont(PyObject *self_, PyObject *args, PyObject *kw) {
     FT_Long width;
     Py_ssize_t index = 0;
     Py_ssize_t layout_engine = 0;
-    unsigned char *encoding;
+    unsigned char *encoding = NULL;
     unsigned char *font_bytes;
     Py_ssize_t font_bytes_size = 0;
     static char *kwlist[] = {
@@ -821,7 +821,7 @@ font_render(FontObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "OO|zzOzizLffO:render",
+            "OO|zzOzizLff:render",
             &string,
             &fill,
             &mode,

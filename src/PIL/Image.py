@@ -540,7 +540,7 @@ class Image:
                 self.fp.close()
         self.fp = None
 
-    def close(self):
+    def close(self) -> None:
         """
         Closes the file pointer, if possible.
 
@@ -3170,7 +3170,7 @@ _fromarray_typemap = {
 }
 
 
-def _decompression_bomb_check(size):
+def _decompression_bomb_check(size: tuple[int, int]) -> None:
     if MAX_IMAGE_PIXELS is None:
         return
 
@@ -3191,7 +3191,7 @@ def _decompression_bomb_check(size):
         )
 
 
-def open(fp, mode="r", formats=None):
+def open(fp, mode="r", formats=None) -> Image:
     """
     Opens and identifies the given image file.
 

@@ -34,7 +34,7 @@ import warnings
 from enum import IntEnum
 from io import BytesIO
 from pathlib import Path
-from typing import BinaryIO
+from typing import Any, BinaryIO, Sequence, cast
 
 from . import Image
 from ._util import is_directory, is_path
@@ -45,7 +45,7 @@ class Layout(IntEnum):
     RAQM = 1
 
 
-MAX_STRING_LENGTH = 1_000_000
+MAX_STRING_LENGTH: int | None = 1_000_000
 
 
 try:
@@ -56,7 +56,7 @@ except ImportError as ex:
     core = DeferredError.new(ex)
 
 
-def _string_length_check(text):
+def _string_length_check(text: str) -> None:
     if MAX_STRING_LENGTH is not None and len(text) > MAX_STRING_LENGTH:
         msg = "too many characters in string"
         raise ValueError(msg)
@@ -81,9 +81,9 @@ def _string_length_check(text):
 class ImageFont:
     """PIL font wrapper"""
 
-    def _load_pilfont(self, filename):
+    def _load_pilfont(self, filename: str | Path) -> None:
         with open(filename, "rb") as fp:
-            image = None
+            image: Image.Image | None = None
             for ext in (".png", ".gif", ".pbm"):
                 if image:
                     image.close()
@@ -106,7 +106,7 @@ class ImageFont:
             self._load_pilfont_data(fp, image)
             image.close()
 
-    def _load_pilfont_data(self, file, image):
+    def _load_pilfont_data(self, file: BinaryIO, image: Image.Image) -> None:
         # read PILfont header
         if file.readline() != b"PILfont\n":
             msg = "Not a PILfont file"
@@ -131,7 +131,13 @@ class ImageFont:
 
         self.font = Image.core.font(image.im, data)
 
-    def getmask(self, text, mode="", *args, **kwargs):
+    def getmask(
+        self,
+        text: str,
+        mode: str | None = "",
+        *args: tuple[Any, ...],
+        **kwargs: dict[str, Any],
+    ) -> Any:  # TODO returns internal image type
         """
         Create a bitmap for the text.
 
@@ -151,7 +157,9 @@ class ImageFont:
         """
         return self.font.getmask(text, mode)
 
-    def getbbox(self, text, *args, **kwargs):
+    def getbbox(
+        self, text: str, *args: tuple[Any, ...], **kwargs: dict[str, Any]
+    ) -> tuple[int, int, int, int]:
         """
         Returns bounding box (in pixels) of given text.
 
@@ -169,7 +177,9 @@ class ImageFont:
         width, height = self.font.getsize(text)
         return 0, 0, width, height
 
-    def getlength(self, text, *args, **kwargs):
+    def getlength(
+        self, text: str, *args: tuple[Any, ...], **kwargs: dict[str, Any]
+    ) -> float:
         """
         Returns length (in pixels) of given text.
         This is the amount by which following text should be offset.
@@ -188,6 +198,8 @@ class ImageFont:
 
 class FreeTypeFont:
     """FreeType font wrapper (requires _imagingft service)"""
+
+    font: core.Font  # TODO remove this
 
     def __init__(
         self,
@@ -221,7 +233,7 @@ class FreeTypeFont:
 
         self.layout_engine = layout_engine
 
-        def load_from_bytes(f):
+        def load_from_bytes(f: BinaryIO) -> None:
             self.font_bytes = f.read()
             self.font = core.getfont(
                 "", size, index, encoding, self.font_bytes, layout_engine
@@ -244,23 +256,28 @@ class FreeTypeFont:
                 font, size, index, encoding, layout_engine=layout_engine
             )
         else:
-            load_from_bytes(font)
+            load_from_bytes(cast(BinaryIO, font))
 
-    def __getstate__(self):
-        return [self.path, self.size, self.index, self.encoding, self.layout_engine]
+    def __getstate__(
+        self,
+    ) -> tuple[bytes | str | Path | BinaryIO | None, float, int, str, Layout]:
+        return self.path, self.size, self.index, self.encoding, self.layout_engine
 
-    def __setstate__(self, state):
+    def __setstate__(
+        self,
+        state: tuple[bytes | str | Path | BinaryIO | None, float, int, str, Layout],
+    ) -> None:
         path, size, index, encoding, layout_engine = state
-        self.__init__(path, size, index, encoding, layout_engine)
+        FreeTypeFont.__init__(self, path, size, index, encoding, layout_engine)
 
-    def getname(self):
+    def getname(self) -> tuple[str, str]:
         """
         :return: A tuple of the font family (e.g. Helvetica) and the font style
             (e.g. Bold)
         """
         return self.font.family, self.font.style
 
-    def getmetrics(self):
+    def getmetrics(self) -> tuple[int, int]:
         """
         :return: A tuple of the font ascent (the distance from the baseline to
             the highest outline point) and descent (the distance from the
@@ -268,7 +285,14 @@ class FreeTypeFont:
         """
         return self.font.ascent, self.font.descent
 
-    def getlength(self, text, mode="", direction=None, features=None, language=None):
+    def getlength(
+        self,
+        text: str,
+        mode: str | None = "",
+        direction: str | None = None,
+        features: Sequence[str] | None = None,
+        language: str | None = None,
+    ) -> float:
         """
         Returns length (in pixels with 1/64 precision) of given text when rendered
         in font with provided direction, features, and language.
@@ -342,14 +366,14 @@ class FreeTypeFont:
 
     def getbbox(
         self,
-        text,
-        mode="",
-        direction=None,
-        features=None,
-        language=None,
-        stroke_width=0,
-        anchor=None,
-    ):
+        text: str,
+        mode: str | None = "",
+        direction: str | None = None,
+        features: Sequence[str] | None = None,
+        language: str | None = None,
+        stroke_width: int = 0,
+        anchor: str | None = None,
+    ) -> tuple[int, int, int, int]:
         """
         Returns bounding box (in pixels) of given text relative to given anchor
         when rendered in font with provided direction, features, and language.
@@ -408,16 +432,16 @@ class FreeTypeFont:
 
     def getmask(
         self,
-        text,
-        mode="",
-        direction=None,
-        features=None,
-        language=None,
-        stroke_width=0,
-        anchor=None,
-        ink=0,
-        start=None,
-    ):
+        text: str,
+        mode: str | None = "",
+        direction: str | None = None,
+        features: Sequence[str] | None = None,
+        language: str | None = None,
+        stroke_width: int = 0,
+        anchor: str | None = None,
+        ink: int = 0,
+        start: tuple[float, float] | None = None,
+    ) -> Any:  # TODO returns internal image type
         """
         Create a bitmap for the text.
 
@@ -499,18 +523,18 @@ class FreeTypeFont:
 
     def getmask2(
         self,
-        text,
-        mode="",
-        direction=None,
-        features=None,
-        language=None,
-        stroke_width=0,
-        anchor=None,
-        ink=0,
-        start=None,
-        *args,
-        **kwargs,
-    ):
+        text: str,
+        mode: str | None = "",
+        direction: str | None = None,
+        features: Sequence[str] | None = None,
+        language: str | None = None,
+        stroke_width: int = 0,
+        anchor: str | None = None,
+        ink: int = 0,
+        start: tuple[float, float] | None = None,
+        *args: tuple[Any, ...],
+        **kwargs: dict[str, Any],
+    ) -> tuple[Any, tuple[int, int]]:  # TODO returns internal image type
         """
         Create a bitmap for the text.
 
@@ -583,7 +607,7 @@ class FreeTypeFont:
         if start is None:
             start = (0, 0)
 
-        def fill(width, height):
+        def fill(width: int, height: int) -> Any:  # TODO returns internal image type
             size = (width, height)
             Image._decompression_bomb_check(size)
             return Image.core.fill("RGBA" if mode == "RGBA" else "L", size)
@@ -603,8 +627,13 @@ class FreeTypeFont:
         )
 
     def font_variant(
-        self, font=None, size=None, index=None, encoding=None, layout_engine=None
-    ):
+        self,
+        font: bytes | str | Path | BinaryIO | None = None,
+        size: float | None = None,
+        index: int | None = None,
+        encoding: str | None = None,
+        layout_engine: Layout | None = None,
+    ) -> FreeTypeFont:
         """
         Create a copy of this FreeTypeFont object,
         using any specified arguments to override the settings.
@@ -627,7 +656,7 @@ class FreeTypeFont:
             layout_engine=layout_engine or self.layout_engine,
         )
 
-    def get_variation_names(self):
+    def get_variation_names(self) -> list[bytes]:
         """
         :returns: A list of the named styles in a variation font.
         :exception OSError: If the font is not a variation font.
@@ -639,7 +668,7 @@ class FreeTypeFont:
             raise NotImplementedError(msg) from e
         return [name.replace(b"\x00", b"") for name in names]
 
-    def set_variation_by_name(self, name):
+    def set_variation_by_name(self, name: str | bytes) -> None:
         """
         :param name: The name of the style.
         :exception OSError: If the font is not a variation font.
@@ -658,7 +687,11 @@ class FreeTypeFont:
 
         self.font.setvarname(index)
 
-    def get_variation_axes(self):
+    def get_variation_axes(
+        self,
+    ) -> list[
+        core.FontVariationAxis
+    ]:  # TODO return type not available unless type checking
         """
         :returns: A list of the axes in a variation font.
         :exception OSError: If the font is not a variation font.
@@ -669,10 +702,11 @@ class FreeTypeFont:
             msg = "FreeType 2.9.1 or greater is required"
             raise NotImplementedError(msg) from e
         for axis in axes:
-            axis["name"] = axis["name"].replace(b"\x00", b"")
+            if axis["name"]:
+                axis["name"] = axis["name"].replace(b"\x00", b"")
         return axes
 
-    def set_variation_by_axes(self, axes):
+    def set_variation_by_axes(self, axes: list[float]) -> None:
         """
         :param axes: A list of values for each axis.
         :exception OSError: If the font is not a variation font.
@@ -687,7 +721,11 @@ class FreeTypeFont:
 class TransposedFont:
     """Wrapper for writing rotated or mirrored text"""
 
-    def __init__(self, font, orientation=None):
+    def __init__(
+        self,
+        font: ImageFont | FreeTypeFont | TransposedFont,
+        orientation: Image.Transpose | None = None,
+    ) -> None:
         """
         Wrapper that creates a transposed font from any existing font
         object.
@@ -701,13 +739,21 @@ class TransposedFont:
         self.font = font
         self.orientation = orientation  # any 'transpose' argument, or None
 
-    def getmask(self, text, mode="", *args, **kwargs):
+    def getmask(
+        self,
+        text: str,
+        mode: str | None = "",
+        *args: tuple[Any, ...],
+        **kwargs: dict[str, Any],
+    ) -> Any:  # TODO returns internal image type
         im = self.font.getmask(text, mode, *args, **kwargs)
         if self.orientation is not None:
             return im.transpose(self.orientation)
         return im
 
-    def getbbox(self, text, *args, **kwargs):
+    def getbbox(
+        self, text: str, *args: tuple[Any, ...], **kwargs: dict[str, Any]
+    ) -> tuple[int, int, int, int]:
         # TransposedFont doesn't support getmask2, move top-left point to (0, 0)
         # this has no effect on ImageFont and simulates anchor="lt" for FreeTypeFont
         left, top, right, bottom = self.font.getbbox(text, *args, **kwargs)
@@ -717,14 +763,16 @@ class TransposedFont:
             return 0, 0, height, width
         return 0, 0, width, height
 
-    def getlength(self, text, *args, **kwargs):
+    def getlength(
+        self, text: str, *args: tuple[Any, ...], **kwargs: dict[str, Any]
+    ) -> float:
         if self.orientation in (Image.Transpose.ROTATE_90, Image.Transpose.ROTATE_270):
             msg = "text length is undefined for text rotated by 90 or 270 degrees"
             raise ValueError(msg)
         return self.font.getlength(text, *args, **kwargs)
 
 
-def load(filename):
+def load(filename: str | Path) -> ImageFont:
     """
     Load a font file.  This function loads a font object from the given
     bitmap font file, and returns the corresponding font object.
@@ -738,7 +786,13 @@ def load(filename):
     return f
 
 
-def truetype(font=None, size=10, index=0, encoding="", layout_engine=None):
+def truetype(
+    font: bytes | str | Path | BinaryIO | None = None,
+    size: float = 10,
+    index: int = 0,
+    encoding: str = "",
+    layout_engine: Layout | None = None,
+) -> FreeTypeFont:
     """
     Load a TrueType or OpenType font from a file or file-like object,
     and create a font object.
@@ -799,7 +853,7 @@ def truetype(font=None, size=10, index=0, encoding="", layout_engine=None):
     :exception ValueError: If the font size is not greater than zero.
     """
 
-    def freetype(font):
+    def freetype(font: bytes | str | Path | BinaryIO | None) -> FreeTypeFont:
         return FreeTypeFont(font, size, index, encoding, layout_engine)
 
     try:
@@ -849,7 +903,7 @@ def truetype(font=None, size=10, index=0, encoding="", layout_engine=None):
         raise
 
 
-def load_path(filename):
+def load_path(filename: str | bytes) -> ImageFont:
     """
     Load font file. Same as :py:func:`~PIL.ImageFont.load`, but searches for a
     bitmap font along the Python path.
@@ -863,14 +917,15 @@ def load_path(filename):
             if not isinstance(filename, str):
                 filename = filename.decode("utf-8")
             try:
-                return load(os.path.join(directory, filename))
+                # TODO sys.path might not be all str
+                return load(os.path.join(directory, filename))  # type: ignore[arg-type]
             except OSError:
                 pass
     msg = "cannot find font file"
     raise OSError(msg)
 
 
-def load_default(size=None):
+def load_default(size: int | None = None) -> ImageFont | FreeTypeFont:
     """If FreeType support is available, load a version of Aileron Regular,
     https://dotcolon.net/font/aileron, with a more limited character set.
 
@@ -885,7 +940,7 @@ def load_default(size=None):
     :return: A font object.
     """
     if core.__class__.__name__ == "module" or size is not None:
-        f = truetype(
+        return truetype(
             BytesIO(
                 base64.b64decode(
                     b"""
@@ -1248,4 +1303,4 @@ w7IkEbzhVQAAAABJRU5ErkJggg==
                 )
             ),
         )
-    return f
+        return f
