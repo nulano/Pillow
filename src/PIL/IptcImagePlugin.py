@@ -20,7 +20,7 @@ import os
 import tempfile
 
 from . import Image, ImageFile
-from ._binary import i8, o8
+from ._binary import o8
 from ._binary import i16be as i16
 from ._binary import i32be as i32
 
@@ -33,13 +33,17 @@ PAD = o8(0) * 4
 # Helpers
 
 
+def _i8(c: int | bytes) -> int:
+    return c if isinstance(c, int) else c[0]
+
+
 def i(c):
     return i32((PAD + c)[-4:])
 
 
 def dump(c):
     for i in c:
-        print("%02x" % i8(i), end=" ")
+        print("%02x" % _i8(i), end=" ")
     print()
 
 
@@ -103,10 +107,10 @@ class IptcImageFile(ImageFile.ImageFile):
                 self.info[tag] = tagdata
 
         # mode
-        layers = i8(self.info[(3, 60)][0])
-        component = i8(self.info[(3, 60)][1])
+        layers = self.info[(3, 60)][0]
+        component = self.info[(3, 60)][1]
         if (3, 65) in self.info:
-            id = i8(self.info[(3, 65)][0]) - 1
+            id = self.info[(3, 65)][0] - 1
         else:
             id = 0
         if layers == 1 and not component:
