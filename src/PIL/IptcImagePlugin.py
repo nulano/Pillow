@@ -44,12 +44,14 @@ def _i8(c: int | bytes) -> int:
 
 
 def i(c, *, _internal=False):
+    """.. deprecated:: 10.2.0"""
     if not _internal:
         deprecate("IptcImagePlugin.i", 12)
     return i32((b"\0\0\0\0" + c)[-4:])
 
 
 def dump(c):
+    """.. deprecated:: 10.2.0"""
     deprecate("IptcImagePlugin.dump", 12)
     for i in c:
         print("%02x" % _i8(i), end=" ")
