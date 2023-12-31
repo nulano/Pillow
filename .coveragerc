@@ -11,6 +11,8 @@ exclude_lines =
     if __name__ == .__main__.:
     # Don't complain about debug code
     if DEBUG:
+    # Don't complain about compatibility code for missing optional dependencies
+    except ImportError( as .+)?:
 
 [run]
 omit =
