@@ -3,11 +3,12 @@ import datetime
 import os
 import re
 import shutil
+import sys
 from io import BytesIO
 
 import pytest
 
-from PIL import Image, ImageMode, features
+from PIL import Image, ImageMode, ImageWin, features
 
 from .helper import (
     assert_image,
@@ -199,6 +200,10 @@ def test_exceptions():
 def test_display_profile():
     # try fetching the profile for the current display device
     ImageCms.get_display_profile()
+
+    if sys.platform == "win32":
+        ImageCms.get_display_profile(ImageWin.HDC(0))
+        ImageCms.get_display_profile(ImageWin.HWND(0))
 
 
 def test_lab_color_profile():
