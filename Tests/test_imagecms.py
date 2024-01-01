@@ -484,11 +484,6 @@ def test_non_ascii_path(tmp_path):
 
 
 def test_profile_typesafety():
-    """Profile init type safety
-
-    prepatch, these would segfault, postpatch they should emit a typeerror
-    """
-
     with pytest.raises(TypeError, match="Invalid type for Profile"):
         ImageCms.ImageCmsProfile(0).tobytes()
     with pytest.raises(TypeError, match="Invalid type for Profile"):
@@ -499,6 +494,12 @@ def test_profile_typesafety():
         ImageCms.core.profile_tobytes(0)
     with pytest.raises(TypeError):
         ImageCms.core.profile_tobytes(1)
+
+    # core profile should not be directly instantiable
+    with pytest.raises(TypeError):
+        ImageCms.core.CmsProfile()
+    with pytest.raises(TypeError):
+        ImageCms.core.CmsProfile(0)
 
 
 def assert_aux_channel_preserved(mode, transform_in_place, preserved_channel):
