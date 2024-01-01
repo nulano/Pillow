@@ -502,6 +502,14 @@ def test_profile_typesafety():
         ImageCms.core.CmsProfile(0)
 
 
+def test_transform_typesafety():
+    # core transform should not be directly instantiable
+    with pytest.raises(TypeError):
+        ImageCms.core.CmsProfile()
+    with pytest.raises(TypeError):
+        ImageCms.core.CmsProfile(0)
+
+
 def assert_aux_channel_preserved(mode, transform_in_place, preserved_channel):
     def create_test_image():
         # set up test image with something interesting in the tested aux channel.
