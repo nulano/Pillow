@@ -20,7 +20,7 @@ import sys
 from enum import IntEnum
 from typing import BinaryIO, Literal, SupportsFloat, SupportsInt, Union
 
-from . import Image
+from . import Image, __version__
 
 try:
     from . import _imagingcms
@@ -1018,4 +1018,4 @@ def versions() -> tuple[str, str | None, str, str]:
     (pyCMS) Fetches versions.
     """
 
-    return VERSION, core.littlecms_version, sys.version.split()[0], Image.__version__
+    return VERSION, core.littlecms_version, sys.version.split()[0], __version__
