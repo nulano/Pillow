@@ -960,9 +960,10 @@ def getDefaultIntent(profile: _CmsProfileCompatible) -> int:
         raise PyCMSError(v) from v
 
 
+# TODO sphinx can't understand Literal[1, -1] as return type
 def isIntentSupported(
     profile: _CmsProfileCompatible, intent: Intent, direction: Direction
-) -> Literal[1, -1]:
+) -> int:
     """
     (pyCMS) Checks if a given intent is supported.
 
