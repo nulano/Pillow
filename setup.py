@@ -297,6 +297,7 @@ class pil_build_ext(build_ext):
             "webp",
             "webpmux",
             "jpeg2000",
+            "jpegxl",
             "imagequant",
             "xcb",
         ]
@@ -704,6 +705,15 @@ class pil_build_ext(build_ext):
                 feature.jpeg2000 = "openjp2"
                 feature.openjpeg_version = ".".join(str(x) for x in best_version)
 
+        if feature.want("jpegxl"):
+            _dbg("Looking for libjxl")
+            if _find_include_file(self, "jxl/version.h"):
+                if _find_library_file(self, "jxl"):
+                    feature.jpegxl = "jxl"
+                elif _find_library_file(self, "libjxl"):  # TODO is this used anywhere?
+                    feature.jpegxl = "libjxl"
+                # TODO jxl_cms.lib?
+
         if feature.want("imagequant"):
             _dbg("Looking for imagequant")
             if _find_include_file(self, "libimagequant.h"):
@@ -846,6 +856,9 @@ class pil_build_ext(build_ext):
             defs.append(("HAVE_OPENJPEG", None))
             if sys.platform == "win32" and not PLATFORM_MINGW:
                 defs.append(("OPJ_STATIC", None))
+        if feature.jpegxl:
+            libs.append(feature.jpegxl)
+            defs.append(("HAVE_LIBJXL", None))
         if feature.zlib:
             libs.append(feature.zlib)
             defs.append(("HAVE_LIBZ", None))
@@ -941,6 +954,7 @@ class pil_build_ext(build_ext):
         options = [
             (feature.jpeg, "JPEG"),
             (feature.jpeg2000, "OPENJPEG (JPEG2000)", feature.openjpeg_version),
+            (feature.jpegxl, "LIBJXL (JPEG XL)"),
             (feature.zlib, "ZLIB (PNG/ZIP)"),
             (feature.imagequant, "LIBIMAGEQUANT"),
             (feature.tiff, "LIBTIFF"),
