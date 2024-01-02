@@ -7,6 +7,7 @@ import re
 import shutil
 import struct
 import subprocess
+from typing import TypedDict
 
 
 def cmd_cd(path: str) -> str:
@@ -109,8 +110,22 @@ ARCHITECTURES = {
     "ARM64": {"vcvars_arch": "x86_arm64", "msbuild_arch": "ARM64"},
 }
 
+
+class Dependency(TypedDict, total=False):
+    url: str
+    filename: str
+    dir: str
+    license: str | list[str]
+    license_pattern: str  # optional
+    patch: dict[str, dict[str, str]]  # optional
+    build: list[str]
+    headers: list[str]  # optional
+    libs: list[str]  # optional
+    bins: list[str]  # optional
+
+
 # dependencies, listed in order of compilation
-DEPS = {
+DEPS: dict[str, Dependency] = {
     "libjpeg": {
         "url": SF_PROJECTS
         + "/libjpeg-turbo/files/3.0.1/libjpeg-turbo-3.0.1.tar.gz/download",
@@ -241,7 +256,10 @@ DEPS = {
         "dir": "brotli-1.1.0",
         "license": "LICENSE",
         "build": [
-            *cmds_cmake(("brotlicommon", "brotlidec"), "-DBUILD_SHARED_LIBS:BOOL=OFF"),
+            *cmds_cmake(
+                ("brotlicommon", "brotlidec", "brotlienc"),
+                "-DBUILD_SHARED_LIBS:BOOL=OFF",
+            ),
             cmd_xcopy(r"c\include", "{inc_dir}"),
         ],
         "libs": ["*.lib"],
@@ -325,6 +343,40 @@ DEPS = {
             cmd_copy(r"src\lib\openjp2\*.h", r"{inc_dir}\openjpeg-2.5.0"),
         ],
         "libs": [r"bin\*.lib"],
+    },
+    # TODO highway may need patches to cross compile for ARM64
+    "highway": {
+        "url": "https://github.com/google/highway/archive/refs/tags/1.0.7.tar.gz",
+        "filename": "highway-1.0.7.tar.gz",
+        "dir": "highway-1.0.7",
+        "license": "LICENSE-BSD3",
+        "build": [
+            *cmds_cmake("hwy"),
+        ],
+        "libs": [r"hwy.lib"],
+    },
+    # TODO STL files produce warning C4530: C++ exception handler used,
+    #  but unwind semantics are not enabled. Specify /EHsc
+    "libjxl": {
+        "url": "https://github.com/libjxl/libjxl/archive/refs/tags/v0.9.0.tar.gz",
+        "filename": "libjxl-0.9.0.tar.gz",
+        "dir": "libjxl-0.9.0",
+        "license": ["LICENSE", "PATENTS"],
+        "build": [
+            *cmds_cmake(
+                "jxl",
+                "-DBUILD_SHARED_LIBS:BOOL=OFF",
+                "-DBUILD_TESTING:BOOL=OFF",
+                '"-DHWY_INCLUDE_DIR={dir_highway}"',
+                "-DJPEGXL_ENABLE_SKCMS:BOOL=OFF",
+                "-DLCMS2_NAMES=lcms2_static",
+                "-DJPEGXL_BUNDLE_LIBPNG:BOOL=OFF",
+                "-DJPEGXL_ENABLE_SJPEG:BOOL=OFF",
+                "-DJPEGXL_ENABLE_JPEGLI:BOOL=OFF",
+            ),
+            cmd_xcopy(r"lib\include", "{inc_dir}"),
+        ],
+        "libs": [r"lib\jxl.lib", r"lib\jxl_cms.lib"],  # TODO do we need jxl_cms.lib?
     },
     "libimagequant": {
         # commit: Merge branch 'master' into msvc (matches 2.17.0 tag)
