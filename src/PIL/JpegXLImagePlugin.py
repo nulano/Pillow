@@ -29,6 +29,7 @@ class JpegXLImageFile(ImageFile.ImageFile):
         self._size = self._basic_info["size"]
         have_alpha = self._basic_info["alpha_bits"] != 0
         if self._basic_info["num_color_channels"] == 1:
+            # TODO check bit depth (image may be "I")
             self._mode = "LA" if have_alpha else "L"
         elif self._basic_info["num_color_channels"] == 3:
             self._mode = "RGBA" if have_alpha else "RGB"
@@ -36,7 +37,12 @@ class JpegXLImageFile(ImageFile.ImageFile):
             msg = "cannot determine image mode"
             raise SyntaxError(msg)
 
+        self.is_animated = self._basic_info["animation_info"] is not None
+
         self.tile = []
+
+    def load(self):
+        
 
 
 Image.register_open(JpegXLImageFile.format, JpegXLImageFile, _accept)

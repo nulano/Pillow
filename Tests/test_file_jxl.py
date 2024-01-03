@@ -63,8 +63,8 @@ def test_info():
         assert info["size"] == (128, 128)
         assert info["bits_per_sample"] == 8
         assert info["uses_original_profile"] is False
-        assert info["have_preview"] is False
-        assert info["have_animation"] is False
+        assert info["preview_size"] is None
+        assert info["animation_info"] is None
         assert info["orientation"] == 1
         assert info["num_color_channels"] == 3
         assert info["num_extra_channels"] == 0

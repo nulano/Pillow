@@ -117,18 +117,43 @@ PyObject *jxl_decoder_get_info(JxlDecoderObject *self, PyObject *Py_UNUSED(ignor
         return NULL;
     }
 
+    PyObject *preview_size;
+    if (info.have_preview) {
+        preview_size = Py_BuildValue("(II)", info.preview.xsize, info.preview.ysize);
+    } else {
+        Py_INCREF(Py_None);
+        preview_size = Py_None;
+    }
+    if (!preview_size) {
+        return NULL;
+    }
+
+    PyObject *animation_info;
+    if (info.have_preview) {
+        animation_info = Py_BuildValue("{s(II)sIsN}",
+                "tps", info.animation.tps_numerator, info.animation.tps_denominator,
+                "num_loops", info.animation.num_loops,
+                "have_timecodes", PyBool_FromLong(info.animation.have_timecodes));
+    } else {
+        Py_INCREF(Py_None);
+        animation_info = Py_None;
+    }
+    if (!animation_info) {
+        Py_DECREF(preview_size);
+        return NULL;
+    }
+
     return Py_BuildValue("{s(II)sIsNsNsNsisIsIsI}",
             "size", info.xsize, info.ysize,
             "bits_per_sample", info.bits_per_sample,
             "uses_original_profile", PyBool_FromLong(info.uses_original_profile),
-            "have_preview", PyBool_FromLong(info.have_preview),
-            "have_animation", PyBool_FromLong(info.have_animation),
+            "preview_size", preview_size,
+            "animation_info", animation_info,
             "orientation", (int) info.orientation,
             "num_color_channels", info.num_color_channels,
             "num_extra_channels", info.num_extra_channels,
             "alpha_bits", info.alpha_bits
-            /* TODO anything else needed? e.g. preview size, animation params */
-    );
+            /* TODO anything else needed? e.g. preview size, animation params */);
 }
 
 void jxl_decoder_dealloc(JxlDecoderObject *self) {
