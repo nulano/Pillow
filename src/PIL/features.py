@@ -15,6 +15,7 @@ modules = {
     "freetype2": ("PIL._imagingft", "freetype2_version"),
     "littlecms2": ("PIL._imagingcms", "littlecms_version"),
     "webp": ("PIL._webp", "webpdecoder_version"),
+    "jpegxl": ("PIL._imagingjxl", "libjxl_version"),
 }
 
 
@@ -270,6 +271,7 @@ def pilinfo(out=None, supported_formats=True):
         ("webp_anim", "WEBP Animation"),
         ("jpg", "JPEG"),
         ("jpg_2000", "OPENJPEG (JPEG2000)"),
+        ("jpegxl", "LIBJXL (JPEG XL)"),
         ("zlib", "ZLIB (PNG/ZIP)"),
         ("libtiff", "LIBTIFF"),
         ("raqm", "RAQM (Bidirectional Text)"),

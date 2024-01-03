@@ -708,9 +708,9 @@ class pil_build_ext(build_ext):
         if feature.want("jpegxl"):
             _dbg("Looking for libjxl")
             if _find_include_file(self, "jxl/version.h"):
-                if _find_library_file(self, "jxl"):
-                    feature.jpegxl = "jxl"
-                elif _find_library_file(self, "libjxl"):  # TODO is this used anywhere?
+                # if _find_library_file(self, "jxl"):  # TODO is this used anywhere?
+                #     feature.jpegxl = "jxl"
+                if _find_library_file(self, "libjxl"):
                     feature.jpegxl = "libjxl"
                 # TODO jxl_cms.lib?
 
@@ -856,9 +856,6 @@ class pil_build_ext(build_ext):
             defs.append(("HAVE_OPENJPEG", None))
             if sys.platform == "win32" and not PLATFORM_MINGW:
                 defs.append(("OPJ_STATIC", None))
-        if feature.jpegxl:
-            libs.append(feature.jpegxl)
-            defs.append(("HAVE_LIBJXL", None))
         if feature.zlib:
             libs.append(feature.zlib)
             defs.append(("HAVE_LIBZ", None))
@@ -923,6 +920,17 @@ class pil_build_ext(build_ext):
             self._update_extension("PIL._webp", libs, defs)
         else:
             self._remove_extension("PIL._webp")
+
+        if feature.jpegxl:
+            libs = [feature.jpegxl]
+            defs = []
+
+            if sys.platform == "win32":
+                defs.append(("JXL_STATIC_DEFINE", None))
+
+            self._update_extension("PIL._imagingjxl", libs, defs)
+        else:
+            self._remove_extension("PIL._imagingjxl")
 
         tk_libs = ["psapi"] if sys.platform in ("win32", "cygwin") else []
         self._update_extension("PIL._imagingtk", tk_libs)
@@ -1006,6 +1014,7 @@ ext_modules = [
     Extension("PIL._imagingft", ["src/_imagingft.c"]),
     Extension("PIL._imagingcms", ["src/_imagingcms.c"]),
     Extension("PIL._webp", ["src/_webp.c"]),
+    Extension("PIL._imagingjxl", ["src/_imagingjxl.c"]),
     Extension("PIL._imagingtk", ["src/_imagingtk.c", "src/Tk/tkImaging.c"]),
     Extension("PIL._imagingmath", ["src/_imagingmath.c"]),
     Extension("PIL._imagingmorph", ["src/_imagingmorph.c"]),

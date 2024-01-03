@@ -39,6 +39,16 @@ def cmd_rmdir(path: str) -> str:
     return f'rmdir /S /Q "{path}"'
 
 
+def cmd_lib(out: str, *libs) -> str:
+    return " ".join(
+        [
+            "lib",
+            rf"/out:{out}",
+            *(f'"{lib}"' for lib in libs),
+        ]
+    )
+
+
 def cmd_nmake(
     makefile: str | None = None,
     target: str = "",
@@ -375,8 +385,16 @@ DEPS: dict[str, Dependency] = {
                 "-DJPEGXL_ENABLE_JPEGLI:BOOL=OFF",
             ),
             cmd_xcopy(r"lib\include", "{inc_dir}"),
+            cmd_lib(
+                "libjxl.lib",
+                r"lib\jxl.lib",
+                r"{lib_dir}\hwy.lib",
+                r"{lib_dir}\brotlicommon.lib",
+                r"{lib_dir}\brotlidec.lib",
+                r"{lib_dir}\brotlienc.lib",
+            ),
         ],
-        "libs": [r"lib\jxl.lib", r"lib\jxl_cms.lib"],  # TODO do we need jxl_cms.lib?
+        "libs": [r"libjxl.lib"],  # TODO do we need jxl_cms.lib?
     },
     "libimagequant": {
         # commit: Merge branch 'master' into msvc (matches 2.17.0 tag)
