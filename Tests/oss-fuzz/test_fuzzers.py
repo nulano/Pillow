@@ -25,7 +25,7 @@ if features.check("libjpeg_turbo"):
 )
 def test_fuzz_images(path):
     # FIXME libjxl:
-    if path.endswith(".jxl"):
+    if path.endswith(b".jxl"):
         pytest.skip("libjxl not yet supported")
     fuzzers.enable_decompressionbomb_error()
     try:
