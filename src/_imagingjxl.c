@@ -327,7 +327,31 @@ static PyTypeObject JxlDecoder_Type = {
     jxl_decoder_new,                   /*tp_new*/
 };
 
-static PyMethodDef jxlMethods[] = {
+PyObject *jxl_check_signature(PyObject *mod, PyObject *prefix) {
+    char *buffer;
+    Py_ssize_t length;
+    if (PyBytes_AsStringAndSize(prefix, &buffer, &length) < 0) {
+        return NULL;
+    }
+    JxlSignature signature = JxlSignatureCheck(buffer, length);
+    switch (signature) {
+        case JXL_SIG_NOT_ENOUGH_BYTES:
+            PyErr_SetString(PyExc_OSError, "not enough bytes to determine file type");
+            return NULL;
+        case JXL_SIG_INVALID:
+            Py_RETURN_NONE;
+        case JXL_SIG_CODESTREAM:
+            return Py_BuildValue("s", "codestream");
+        case JXL_SIG_CONTAINER:
+            return Py_BuildValue("s", "container");
+        default:
+            PyErr_Format(PyExc_RuntimeError, "unexpected result from jxl decoder: %d", (int)signature);
+            return NULL;
+    }
+}
+
+static PyMethodDef jxl_methods[] = {
+    {"check_signature", jxl_check_signature, METH_O, "Check signature to determine JXL file type, or return None"},
     {NULL, NULL}};
 
 
@@ -364,7 +388,7 @@ PyInit__imagingjxl(void) {
         "_imagingjxl", /* m_name */
         NULL,          /* m_doc */
         -1,            /* m_size */
-        jxlMethods,    /* m_methods */
+        jxl_methods,    /* m_methods */
     };
 
     m = PyModule_Create(&module_def);

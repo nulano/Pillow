@@ -64,6 +64,7 @@ def test_simple():
         data = f.read()
     with Image.open(VerboseIO(io.BytesIO(data))) as im:
         assert isinstance(im, JpegXLImagePlugin.JpegXLImageFile)
+        assert im._type == "codestream"
         info = im._basic_info
         assert info["size"] == (128, 128)
         assert info["bits_per_sample"] == 8
@@ -88,6 +89,7 @@ def test_simple():
 
 def test_lossless_jpeg():
     with Image.open("Tests/images/hopper.jpg.jxl") as im:
+        assert im._type == "container"
         assert im.size == (128, 128)
         assert im.mode == "RGB"
         assert_image_similar_tofile(im, "Tests/images/hopper.jpg", 1.8)
@@ -95,6 +97,7 @@ def test_lossless_jpeg():
 
 def test_animated():
     with Image.open("Tests/images/delay.jxl") as im:
+        assert im._type == "codestream"
         with Image.open("Tests/images/apng/delay.png") as expected:
             im.load()
             expected.load()

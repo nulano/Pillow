@@ -10,10 +10,7 @@ except ImportError as ex:
 
 
 def _accept(prefix):
-    return (
-        prefix[:2] == b"\xFF\x0A"
-        or prefix[:12] == b"\0\0\0\x0C\x4A\x58\x4C\x20\x0D\x0A\x87\x0A"
-    )
+    return _jxl.check_signature(prefix) is not None
 
 
 class JpegXLImageFile(ImageFile.ImageFile):
@@ -34,6 +31,8 @@ class JpegXLImageFile(ImageFile.ImageFile):
 
         data = self.map if self.map is not None else self.fp.read()
         self._decoder = _jxl.JxlDecoder(data)
+
+        self._type = _jxl.check_signature(data[:16])  # TODO rename field
 
         self._basic_info = self._decoder.get_info()
 
