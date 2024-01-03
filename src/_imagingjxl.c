@@ -5,25 +5,22 @@
 
 typedef struct {
     PyObject_HEAD JxlDecoder *decoder;
-    PyObject *fp;
-    PyObject *data;
+    Py_buffer buffer;
     size_t frame_no;
 } JxlDecoderObject;
 
 PyObject *jxl_decoder_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds) {
+    Py_buffer buffer;
+    static char *kwlist[] = {"data", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "y*:JxlDecoder", kwlist, &buffer)) {
+        return NULL;
+    }
+
     JxlDecoderObject *self = (JxlDecoderObject *)subtype->tp_alloc(subtype, 0);
     if (self) {
         self->decoder = NULL;
-        self->fp = NULL;
-        self->data = NULL;
+        self->buffer = buffer;
         self->frame_no = 0;
-
-        static char *kwlist[] = {"fp", NULL};
-        if (!PyArg_ParseTupleAndKeywords(args, kwds, "O:JxlDecoder", kwlist, &self->fp)) {
-            Py_DECREF(self);
-            return NULL;
-        }
-        Py_INCREF(self->fp);
 
         self->decoder = JxlDecoderCreate(0);
         if (!self->decoder) {
@@ -39,6 +36,10 @@ PyObject *jxl_decoder_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
         if (JxlDecoderSetUnpremultiplyAlpha(self->decoder, 1) != JXL_DEC_SUCCESS) {
             goto decoder_err;
         }
+        if (JxlDecoderSetInput(self->decoder, self->buffer.buf, self->buffer.len) != JXL_DEC_SUCCESS) {
+            goto decoder_err;
+        }
+        JxlDecoderCloseInput(self->decoder);
     }
     return self;
 
@@ -48,50 +49,6 @@ decoder_err:
     return NULL;
 }
 
-int _jxl_decoder_seek(JxlDecoderObject *self, Py_ssize_t offset, int whence) {
-    PyObject *result;
-    result = PyObject_CallMethod(self->fp, "seek", "ni", offset, whence);
-    Py_XDECREF(result);
-    return !result;
-}
-
-Py_ssize_t _jxl_decoder_read(JxlDecoderObject *self, Py_ssize_t len) {
-    Py_ssize_t rewind;
-    char *buffer;
-    Py_ssize_t length_read;
-    JxlDecoderStatus status;
-
-    rewind = JxlDecoderReleaseInput(self->decoder);
-    Py_XDECREF(self->data);
-    self->data = NULL;
-    if (rewind != 0 && _jxl_decoder_seek(self, -rewind, 1)) {
-        goto err;
-    }
-    len += rewind;
-
-    self->data = PyObject_CallMethod(self->fp, "read", "n", len);
-    if (!self->data) {
-        goto err;
-    }
-    int result = PyBytes_AsStringAndSize(self->data, &buffer, &length_read);
-    if (result < 0) {
-        goto err;
-    }
-    if (length_read <= rewind || length_read > len) {
-        PyErr_SetString(PyExc_RuntimeError, "fp.read returned bytes with unexpected length");
-        goto err;
-    }
-
-    status = JxlDecoderSetInput(self->decoder, buffer, length_read);
-    if (status != JXL_DEC_SUCCESS) {
-        goto err;
-    }
-    return length_read - rewind;
-
-err:
-    return -1;
-}
-
 PyObject *jxl_decoder_get_info(JxlDecoderObject *self, PyObject *Py_UNUSED(ignored)) {
     JxlDecoderStatus status = JxlDecoderGetBasicInfo(self->decoder, NULL);
     while (status == JXL_DEC_NEED_MORE_INPUT) {
@@ -99,15 +56,6 @@ PyObject *jxl_decoder_get_info(JxlDecoderObject *self, PyObject *Py_UNUSED(ignor
         switch (status) {
             case JXL_DEC_BASIC_INFO:
                 break;
-            case JXL_DEC_NEED_MORE_INPUT:
-                size_t size = JxlDecoderSizeHintBasicInfo(self->decoder);
-                if (_jxl_decoder_read(self, size) < 0) {
-                    return NULL;
-                }
-                break;
-            case JXL_DEC_SUCCESS:
-                /* break; TODO this status seems unexpected */
-            case JXL_DEC_ERROR:
             default:
                 /* TODO use Pillow error? */
                 PyErr_Format(PyExc_RuntimeError, "unexpected result from jxl decoder: %d", status);
@@ -157,7 +105,7 @@ PyObject *jxl_decoder_get_info(JxlDecoderObject *self, PyObject *Py_UNUSED(ignor
             "num_color_channels", info.num_color_channels,
             "num_extra_channels", info.num_extra_channels,
             "alpha_bits", info.alpha_bits
-            /* TODO anything else needed? e.g. preview size, animation params */);
+            /* TODO anything else needed? e.g. n_frames */);
 }
 
 PyObject *jxl_decoder_get_icc_profile(JxlDecoderObject *self, PyObject *Py_UNUSED(ignored)) {
@@ -174,10 +122,6 @@ PyObject *jxl_decoder_get_icc_profile(JxlDecoderObject *self, PyObject *Py_UNUSE
             case JXL_DEC_COLOR_ENCODING:
                 break;
             case JXL_DEC_NEED_MORE_INPUT:
-                if (_jxl_decoder_read(self, 1024 /* TODO */) < 0) {
-                    return NULL;
-                }
-                break;
             case JXL_DEC_ERROR:
                 /* TODO use Pillow error? */
                 PyErr_Format(PyExc_RuntimeError, "unexpected result from jxl decoder: %d", status);
@@ -239,11 +183,6 @@ PyObject *jxl_decoder_next(JxlDecoderObject *self, PyObject *arg) {
     while (status != JXL_DEC_FULL_IMAGE) {
         status = JxlDecoderProcessInput(self->decoder);
         switch (status) {
-            case JXL_DEC_NEED_MORE_INPUT:
-                if (_jxl_decoder_read(self, 4096 /* TODO */) < 0) {
-                    return NULL;
-                }
-                break;
             case JXL_DEC_FRAME:
                 if (progress != 0) {
                     goto err;
@@ -285,6 +224,7 @@ PyObject *jxl_decoder_next(JxlDecoderObject *self, PyObject *arg) {
                 Py_RETURN_NONE;  /* no more data */
             default:  /* TODO can this infinitely loop? probably not, since we'll get success? */
                 /*break;*/  /* unknown event, continue */
+            case JXL_DEC_NEED_MORE_INPUT:
             case JXL_DEC_ERROR:
 err:
                 Py_XDECREF(frame_name);
@@ -312,13 +252,12 @@ PyObject *jxl_decoder_skip(JxlDecoderObject *self, PyObject *skip_obj) {
 
 PyObject *jxl_decoder_rewind(JxlDecoderObject *self, PyObject *Py_UNUSED(ignored)) {
     JxlDecoderRewind(self->decoder);
-    self->frame_no = 0;
-    /* TODO do we need to ReleaseInput()? */
-    Py_XDECREF(self->data);
-    self->data = NULL;
-    if (_jxl_decoder_seek(self, 0, 0) < 0) {
+    if (JxlDecoderSetInput(self->decoder, self->buffer.buf, self->buffer.len) != JXL_DEC_SUCCESS) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to rewind input");
         return NULL;
     }
+    JxlDecoderCloseInput(self->decoder);
+    self->frame_no = 0;
     Py_RETURN_NONE;
 }
 
@@ -330,8 +269,7 @@ void jxl_decoder_dealloc(JxlDecoderObject *self) {
     if (self->decoder) {
         JxlDecoderDestroy(self->decoder);
     }
-    Py_XDECREF(self->data);
-    Py_XDECREF(self->fp);
+    PyBuffer_Release(&self->buffer);
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
 

@@ -20,9 +20,20 @@ class JpegXLImageFile(ImageFile.ImageFile):
     format = "JPEGXL"
     format_description = "JPEG XL (ISO/IEC 18181)"
 
-    def _open(self):
-        # TODO when to close self.fp?
-        self._decoder = _jxl.JxlDecoder(self.fp)
+    def _open(self) -> None:
+        self.map = None
+        if self.filename:
+            try:
+                # use mmap, if possible
+                import mmap
+
+                with open(self.filename) as fp:
+                    self.map = mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ)
+            except (AttributeError, OSError, ImportError):
+                pass
+
+        data = self.map if self.map is not None else self.fp.read()
+        self._decoder = _jxl.JxlDecoder(data)
 
         self._basic_info = self._decoder.get_info()
 

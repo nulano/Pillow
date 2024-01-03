@@ -25,7 +25,7 @@ class VerboseIO:
     def __init__(self, wrap):
         self.fp = wrap
 
-    def read(self, size):
+    def read(self, size=-1):
         print(f"reading {size} bytes, ", end="")
         data = self.fp.read(size)
         print(f"read {len(data)} bytes")
