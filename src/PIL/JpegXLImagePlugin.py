@@ -41,8 +41,7 @@ class JpegXLImageFile(ImageFile.ImageFile):
 
         self.tile = []
 
-    def load(self):
-        
+    # def load(self):
 
 
 Image.register_open(JpegXLImageFile.format, JpegXLImageFile, _accept)

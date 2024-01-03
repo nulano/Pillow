@@ -55,7 +55,7 @@ def test_sanity():
 
 
 def test_info():
-    with open("images/hopper.jxl", "rb") as f:
+    with open("Tests/images/hopper.jxl", "rb") as f:
         data = f.read()
     with Image.open(VerboseIO(io.BytesIO(data))) as im:
         assert isinstance(im, JpegXLImagePlugin.JpegXLImageFile)
