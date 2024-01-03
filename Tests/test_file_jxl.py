@@ -7,6 +7,11 @@ import re
 import pytest
 
 from PIL import features, Image
+from Tests.helper import (
+    assert_image_equal_tofile,
+    assert_image_similar,
+    assert_image_similar_tofile,
+)
 
 try:
     from PIL import JpegXLImagePlugin
@@ -54,7 +59,7 @@ def test_sanity():
     assert re.search(r"\d+\.\d+\.\d+$", features.version_module("jpegxl"))
 
 
-def test_info():
+def test_simple():
     with open("Tests/images/hopper.jxl", "rb") as f:
         data = f.read()
     with Image.open(VerboseIO(io.BytesIO(data))) as im:
@@ -71,12 +76,66 @@ def test_info():
         assert info["alpha_bits"] == 0
         assert im.size == (128, 128)
         assert im.mode == "RGB"
-        icc_profile = im.info["icc_profile"]
-        assert icc_profile
-        try:
-            from PIL import ImageCms
-        except ImportError:
-            pass
-        else:
-            cms_profile = ImageCms.getOpenProfile(io.BytesIO(icc_profile))
-            assert cms_profile.profile.profile_description == "RGB_D65_SRG_Rel_g0.45455"
+        assert "RGB_D65_SRG_Rel_g0".encode("utf-16le") in im.info["icc_profile"]
+        im.load()
+        assert im._frame_info["duration"] == 0
+        assert im._frame_info["timecode"] == 0
+        assert im._frame_info["name"] == b""
+        assert im._frame_info["is_last"] is True
+        assert_image_similar_tofile(im, "Tests/images/hopper.png", 8.25)
+        assert_image_similar_tofile(im, "Tests/images/hopper.jpg", 8.3)
+
+
+def test_lossless_jpeg():
+    with Image.open("Tests/images/hopper.jpg.jxl") as im:
+        assert im.size == (128, 128)
+        assert im.mode == "RGB"
+        assert_image_similar_tofile(im, "Tests/images/hopper.jpg", 1.8)
+
+
+def test_animated():
+    with Image.open("Tests/images/delay.jxl") as im:
+        with Image.open("Tests/images/apng/delay.png") as expected:
+            im.load()
+            expected.load()
+            assert im._frame_info["duration"] == 100
+            assert im._frame_info["is_last"] is False
+            assert_image_similar(im, expected, 2.9)
+
+            im.seek(1)
+            im.load()
+            expected.seek(1)
+            assert im._frame_info["duration"] == expected.info["duration"]
+            assert im._frame_info["is_last"] is False
+            assert_image_similar(im, expected, 0.02)
+
+            im.seek(2)
+            im.load()
+            expected.seek(2)
+            assert im._frame_info["duration"] == expected.info["duration"]
+            assert im._frame_info["is_last"] is False
+            assert_image_similar(im, expected, 0.17)
+
+            im.seek(3)
+            im.load()
+            expected.seek(3)
+            assert im._frame_info["duration"] == expected.info["duration"]
+            assert im._frame_info["is_last"] is False
+            assert_image_similar(im, expected, 0.02)
+
+            im.seek(4)
+            im.load()
+            expected.seek(4)
+            assert im._frame_info["duration"] == expected.info["duration"]
+            assert im._frame_info["is_last"] is True
+            assert_image_similar(im, expected, 0.17)
+
+
+def test_rewind_decoder():
+    with open("Tests/images/hopper.jxl", "rb") as f:
+        data = f.read()
+    with Image.open(VerboseIO(io.BytesIO(data))) as im:
+        assert isinstance(im, JpegXLImagePlugin.JpegXLImageFile)
+        assert im._decoder.get_icc_profile() == im.info["icc_profile"]
+        im._decoder.rewind()
+        assert im._decoder.get_icc_profile() == im.info["icc_profile"]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import BinaryIO, TypedDict
+from typing import Any, BinaryIO, TypedDict
 
 class AnimationInfo(TypedDict):
     tps: tuple[int, int]
@@ -18,7 +18,20 @@ class BasicInfo(TypedDict):
     num_extra_channels: int
     alpha_bits: int
 
+class FrameInfo(TypedDict):
+    duration: int
+    timecode: int
+    name: bytes
+    is_last: bool
+
 class JxlDecoder:
     def __new__(cls, fp: BinaryIO) -> JxlDecoder: ...
     def get_info(self) -> BasicInfo: ...
     def get_icc_profile(self) -> bytes | None: ...
+    def next(self, im_id: int) -> FrameInfo | None: ...
+    def skip(self, frames: int) -> None: ...
+    def rewind(self) -> None: ...
+    @property
+    def frame_no(self) -> int: ...
+
+# TODO def check_signature(data: bytes) -> int: ...

@@ -48,7 +48,34 @@ class JpegXLImageFile(ImageFile.ImageFile):
         if icc_profile:
             self.info["icc_profile"] = icc_profile
 
-    # def load(self):
+        self._frame_info = None
+        self._frame_current = 0
+        self._frame_loaded = -1
+
+    def _seek(self, frame):
+        if frame < self._decoder.frame_no:
+            self._decoder.rewind()
+        frame -= self._decoder.frame_no
+        if frame > 0:
+            self._decoder.skip(frame)
+        # elif frame < 0: raise ValueError(...)
+
+    def load(self):
+        if self.im is None:
+            self.im = Image.core.fill(self._mode, self._size, 0)
+        if self._frame_loaded != self._frame_current:
+            self._seek(self._frame_current)
+            self._frame_info = self._decoder.next(self.im.id)
+            self._frame_loaded = self._frame_current
+        return super().load()
+
+    def tell(self) -> int:
+        return self._frame_current
+
+    def seek(self, frame):
+        if frame < 0:
+            return
+        self._frame_current = frame
 
 
 Image.register_open(JpegXLImageFile.format, JpegXLImageFile, _accept)
