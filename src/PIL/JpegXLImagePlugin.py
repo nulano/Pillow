@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from . import Image
-from . import ImageFile
-from . import _imagingjxl as _jxl
+from . import Image, ImageFile
+from ._util import DeferredError
+
+try:
+    from . import _imagingjxl as _jxl
+except ImportError as ex:
+    _jxl = DeferredError.new(ex)
 
 
 def _accept(prefix):
     return (
-        prefix[:4] == b"\xFF\x0A"
+        prefix[:2] == b"\xFF\x0A"
         or prefix[:12] == b"\0\0\0\x0C\x4A\x58\x4C\x20\x0D\x0A\x87\x0A"
     )
 
@@ -23,6 +27,14 @@ class JpegXLImageFile(ImageFile.ImageFile):
         self._basic_info = self._decoder.get_info()
 
         self._size = self._basic_info["size"]
+        have_alpha = self._basic_info["alpha_bits"] != 0
+        if self._basic_info["num_color_channels"] == 1:
+            self._mode = "LA" if have_alpha else "L"
+        elif self._basic_info["num_color_channels"] == 3:
+            self._mode = "RGBA" if have_alpha else "RGB"
+        else:
+            msg = "cannot determine image mode"
+            raise SyntaxError(msg)
 
         self.tile = []
 

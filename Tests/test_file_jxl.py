@@ -26,16 +26,25 @@ class VerboseIO:
         print(f"read {len(data)} bytes")
         return data
 
+    def readline(self, size=-1):
+        print(f"readline {size}")
+        return self.fp.readline(size)
+
     def seek(self, offset, whence=os.SEEK_SET):
         print(f"seeking {offset} whence {whence}")
         return self.fp.seek(offset, whence)
+
+    def tell(self):
+        off = self.fp.tell()
+        print(f"tell {off}")
+        return off
 
 
 def setup_module():
     try:
         from PIL import JpegXLImagePlugin
 
-        # need to hit getattr to trigger the delayed import error; TODO this is not true yet
+        # need to hit getattr to trigger the delayed import error
         assert JpegXLImagePlugin._jxl.JxlDecoder
     except ImportError as v:
         pytest.skip(str(v))
@@ -46,17 +55,19 @@ def test_sanity():
 
 
 def test_info():
-    # TODO access via image plugin
     with open("images/hopper.jxl", "rb") as f:
         data = f.read()
-    fp = VerboseIO(io.BytesIO(data))
-    info = JpegXLImagePlugin._jxl.JxlDecoder(fp).get_info()
-    assert info["size"] == (128, 128)
-    assert info["bits_per_sample"] == 8
-    assert info["uses_original_profile"] is False
-    assert info["have_preview"] is False
-    assert info["have_animation"] is False
-    assert info["orientation"] == 1
-    assert info["num_color_channels"] == 3
-    assert info["num_extra_channels"] == 0
-    assert info["alpha_bits"] == 0
+    with Image.open(VerboseIO(io.BytesIO(data))) as im:
+        assert isinstance(im, JpegXLImagePlugin.JpegXLImageFile)
+        info = im._basic_info
+        assert info["size"] == (128, 128)
+        assert info["bits_per_sample"] == 8
+        assert info["uses_original_profile"] is False
+        assert info["have_preview"] is False
+        assert info["have_animation"] is False
+        assert info["orientation"] == 1
+        assert info["num_color_channels"] == 3
+        assert info["num_extra_channels"] == 0
+        assert info["alpha_bits"] == 0
+        assert im.size == (128, 128)
+        assert im.mode == "RGB"
