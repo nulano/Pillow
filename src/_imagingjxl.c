@@ -27,12 +27,13 @@ PyObject *jxl_decoder_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
         if (!self->decoder) {
             goto decoder_err;
         }
-        if (JxlDecoderSubscribeEvents(self->decoder, JXL_DEC_BASIC_INFO /* TODO list others */) != JXL_DEC_SUCCESS) {
+        if (JxlDecoderSubscribeEvents(self->decoder, JXL_DEC_BASIC_INFO | JXL_DEC_COLOR_ENCODING /* TODO list others */) != JXL_DEC_SUCCESS) {
             goto decoder_err;
         }
-        if (JxlDecoderSetKeepOrientation(self->decoder, 1) != JXL_DEC_SUCCESS) {
-            goto decoder_err;
-        }
+// TODO do we want to keep orientation?
+//        if (JxlDecoderSetKeepOrientation(self->decoder, 1) != JXL_DEC_SUCCESS) {
+//            goto decoder_err;
+//        }
         if (JxlDecoderSetUnpremultiplyAlpha(self->decoder, 1) != JXL_DEC_SUCCESS) {
             goto decoder_err;
         }
@@ -156,6 +157,49 @@ PyObject *jxl_decoder_get_info(JxlDecoderObject *self, PyObject *Py_UNUSED(ignor
             /* TODO anything else needed? e.g. preview size, animation params */);
 }
 
+PyObject *jxl_decoder_get_icc_profile(JxlDecoderObject *self, PyObject *Py_UNUSED(ignored)) {
+    size_t icc_size = 0;
+    JxlDecoderStatus status = JxlDecoderGetICCProfileSize(self->decoder, JXL_COLOR_PROFILE_TARGET_DATA, &icc_size);
+    while (status == JXL_DEC_NEED_MORE_INPUT) {
+        status = JxlDecoderProcessInput(self->decoder);
+        switch (status) {
+            case JXL_DEC_BASIC_INFO:
+                /* continue, icc profile comes later */
+                status = JXL_DEC_NEED_MORE_INPUT;
+                break;
+            default: /* different event, probably have no icc profile, fall through */
+            case JXL_DEC_COLOR_ENCODING:
+                break;
+            case JXL_DEC_NEED_MORE_INPUT:
+                if (_jxl_decoder_read(self, 1024 /* TODO */) < 0) {
+                    return NULL;
+                }
+                break;
+            case JXL_DEC_ERROR:
+                /* TODO use Pillow error? */
+                PyErr_SetString(PyExc_RuntimeError, "unexpected result from jxl decoder");
+                return NULL;
+        }
+    }
+    status = JxlDecoderGetICCProfileSize(self->decoder, JXL_COLOR_PROFILE_TARGET_DATA, &icc_size);
+    if (status != JXL_DEC_SUCCESS || (Py_ssize_t) icc_size <= 0) { /* TODO is this check correct? */
+        /* either missing or incompatible */
+        Py_RETURN_NONE;
+    }
+
+    PyObject *icc_data = PyBytes_FromStringAndSize(NULL, icc_size);
+    if (!icc_data) {
+        return NULL;
+    }
+    char *buffer = PyBytes_AS_STRING(icc_data);
+    if (JxlDecoderGetColorAsICCProfile(self->decoder, JXL_COLOR_PROFILE_TARGET_DATA, buffer, icc_size) != JXL_DEC_SUCCESS) {
+        Py_DECREF(icc_data);
+        PyErr_SetString(PyExc_RuntimeError, "failed to get icc color profile");
+        return NULL;
+    }
+    return icc_data;
+}
+
 void jxl_decoder_dealloc(JxlDecoderObject *self) {
     if (self->decoder) {
         JxlDecoderDestroy(self->decoder);
@@ -168,6 +212,7 @@ void jxl_decoder_dealloc(JxlDecoderObject *self) {
 
 static struct PyMethodDef jxl_decoder_methods[] = {
     {"get_info", (PyCFunction)jxl_decoder_get_info, METH_NOARGS, "Get basic JXL info"},
+    {"get_icc_profile", (PyCFunction)jxl_decoder_get_icc_profile, METH_NOARGS, "Get Target ICC profile"},
     {NULL, NULL} /* sentinel */
 };
 

@@ -71,3 +71,12 @@ def test_info():
         assert info["alpha_bits"] == 0
         assert im.size == (128, 128)
         assert im.mode == "RGB"
+        icc_profile = im.info["icc_profile"]
+        assert icc_profile
+        try:
+            from PIL import ImageCms
+        except ImportError:
+            pass
+        else:
+            cms_profile = ImageCms.getOpenProfile(io.BytesIO(icc_profile))
+            assert cms_profile.profile.profile_description == "RGB_D65_SRG_Rel_g0.45455"

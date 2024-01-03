@@ -26,7 +26,11 @@ class JpegXLImageFile(ImageFile.ImageFile):
 
         self._basic_info = self._decoder.get_info()
 
-        self._size = self._basic_info["size"]
+        width, height = self._basic_info["size"]
+        if 5 <= self._basic_info["orientation"] <= 8:
+            width, height = height, width
+        self._size = (width, height)
+
         have_alpha = self._basic_info["alpha_bits"] != 0
         if self._basic_info["num_color_channels"] == 1:
             # TODO check bit depth (image may be "I")
@@ -38,8 +42,11 @@ class JpegXLImageFile(ImageFile.ImageFile):
             raise SyntaxError(msg)
 
         self.is_animated = self._basic_info["animation_info"] is not None
-
         self.tile = []
+
+        icc_profile = self._decoder.get_icc_profile()
+        if icc_profile:
+            self.info["icc_profile"] = icc_profile
 
     # def load(self):
 
