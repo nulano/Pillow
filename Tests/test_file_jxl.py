@@ -75,8 +75,11 @@ def test_simple():
         assert info["num_color_channels"] == 3
         assert info["num_extra_channels"] == 0
         assert info["alpha_bits"] == 0
+        assert info["num_frames"] == 1
+        assert info["box_types"] == []
         assert im.size == (128, 128)
         assert im.mode == "RGB"
+        assert im.n_frames == 1
         assert "RGB_D65_SRG_Rel_g0".encode("utf-16le") in im.info["icc_profile"]
         im.load()
         assert im._frame_info["duration"] == 0
@@ -88,30 +91,43 @@ def test_simple():
 
 
 def test_lossless_jpeg():
-    # returns the following events:
-    #  "JXL ", "ftyp", "jxlp", basic info, color, "jbrd", "jxlp", frame,
-    #  need buffer, full frame
     with Image.open("Tests/images/hopper.jpg.jxl") as im:
         assert im._type == "container"
         assert im.size == (128, 128)
         assert im.mode == "RGB"
+        assert im.n_frames == 1
+        assert im._basic_info["box_types"] == [
+            b"JXL ",
+            b"ftyp",
+            b"jxlp",
+            b"jbrd",
+            b"jxlp",
+        ]
         assert_image_similar_tofile(im, "Tests/images/hopper.jpg", 1.8)
 
 
 def test_exif():
-    # returns the following events:
-    #  "JXL ", "ftyp", "jxlp", basic info, color, "jbrd", "Exif", "xml ",
-    #  "jxlp", frame, need buffer, full frame
     with Image.open("Tests/images/pil_sample_rgb.jxl") as im:
         assert im._type == "container"
         assert im.size == (100, 100)
         assert im.mode == "RGB"
+        assert im.n_frames == 1
+        assert im._basic_info["box_types"] == [
+            b"JXL ",
+            b"ftyp",
+            b"jxlp",
+            b"jbrd",
+            b"Exif",
+            b"xml ",
+            b"jxlp",
+        ]
         assert_image_similar_tofile(im, "Tests/images/pil_sample_rgb.jpg", 1.2)
 
 
 def test_animated():
     with Image.open("Tests/images/delay.jxl") as im:
         assert im._type == "codestream"
+        assert im.n_frames == 5
         with Image.open("Tests/images/apng/delay.png") as expected:
             im.load()
             expected.load()

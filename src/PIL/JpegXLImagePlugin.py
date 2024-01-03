@@ -33,7 +33,6 @@ class JpegXLImageFile(ImageFile.ImageFile):
         self._decoder = _jxl.JxlDecoder(data)
 
         self._type = _jxl.check_signature(data[:16])  # TODO rename field
-
         self._basic_info = self._decoder.get_info()
 
         width, height = self._basic_info["size"]
@@ -51,6 +50,7 @@ class JpegXLImageFile(ImageFile.ImageFile):
             msg = "cannot determine image mode"
             raise SyntaxError(msg)
 
+        self.n_frames = self._basic_info["num_frames"]
         self.is_animated = self._basic_info["animation_info"] is not None
         self.tile = []
 
@@ -83,7 +83,7 @@ class JpegXLImageFile(ImageFile.ImageFile):
         return self._frame_current
 
     def seek(self, frame):
-        if frame < 0:
+        if not self._seek_check(frame):
             return
         self._frame_current = frame
 

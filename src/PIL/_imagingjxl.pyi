@@ -17,6 +17,8 @@ class BasicInfo(TypedDict):
     num_color_channels: int
     num_extra_channels: int
     alpha_bits: int
+    num_frames: int
+    box_types: list[bytes]
 
 class FrameInfo(TypedDict):
     duration: int
