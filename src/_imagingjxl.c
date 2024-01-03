@@ -9,6 +9,23 @@ typedef struct {
     size_t frame_no;
 } JxlDecoderObject;
 
+int _jxl_decoder_reset(JxlDecoderObject *self, int events_wanted) {
+    self->frame_no = 0;
+    JxlDecoderRewind(self->decoder);
+    if (JxlDecoderSubscribeEvents(self->decoder, events_wanted) != JXL_DEC_SUCCESS) {
+        return 1;
+    }
+    if (JxlDecoderSetInput(self->decoder, self->buffer.buf, self->buffer.len) != JXL_DEC_SUCCESS) {
+        return 1;
+    }
+    JxlDecoderCloseInput(self->decoder);
+    return 0;
+}
+
+int _jxl_decoder_rewind(JxlDecoderObject *self) {
+    return _jxl_decoder_reset(self, JXL_DEC_BASIC_INFO | JXL_DEC_COLOR_ENCODING | JXL_DEC_FRAME | JXL_DEC_FULL_IMAGE);
+}
+
 PyObject *jxl_decoder_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds) {
     Py_buffer buffer;
     static char *kwlist[] = {"data", NULL};
@@ -20,13 +37,9 @@ PyObject *jxl_decoder_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
     if (self) {
         self->decoder = NULL;
         self->buffer = buffer;
-        self->frame_no = 0;
 
         self->decoder = JxlDecoderCreate(0);
         if (!self->decoder) {
-            goto decoder_err;
-        }
-        if (JxlDecoderSubscribeEvents(self->decoder, JXL_DEC_BASIC_INFO | JXL_DEC_COLOR_ENCODING | JXL_DEC_FRAME | JXL_DEC_FULL_IMAGE /* TODO list others */) != JXL_DEC_SUCCESS) {
             goto decoder_err;
         }
 // TODO do we want to keep orientation?
@@ -36,10 +49,9 @@ PyObject *jxl_decoder_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds)
         if (JxlDecoderSetUnpremultiplyAlpha(self->decoder, 1) != JXL_DEC_SUCCESS) {
             goto decoder_err;
         }
-        if (JxlDecoderSetInput(self->decoder, self->buffer.buf, self->buffer.len) != JXL_DEC_SUCCESS) {
+        if (_jxl_decoder_rewind(self)) {
             goto decoder_err;
         }
-        JxlDecoderCloseInput(self->decoder);
     }
     return self;
 
@@ -251,19 +263,36 @@ PyObject *jxl_decoder_skip(JxlDecoderObject *self, PyObject *skip_obj) {
 }
 
 PyObject *jxl_decoder_rewind(JxlDecoderObject *self, PyObject *Py_UNUSED(ignored)) {
-    JxlDecoderRewind(self->decoder);
-    if (JxlDecoderSetInput(self->decoder, self->buffer.buf, self->buffer.len) != JXL_DEC_SUCCESS) {
+    if (_jxl_decoder_rewind(self)) {
         PyErr_SetString(PyExc_RuntimeError, "Failed to rewind input");
         return NULL;
     }
-    JxlDecoderCloseInput(self->decoder);
-    self->frame_no = 0;
     Py_RETURN_NONE;
 }
 
 PyObject *jxl_decoder_frame_no(JxlDecoderObject *self, void *closure) {
     return PyLong_FromSize_t(self->frame_no);
 }
+
+/*
+TEST function
+void _jxl_decoder_dummy_callback(Imaging im, size_t x, size_t y, size_t num_pixels, const UINT8 *pixels) {
+}
+
+PyObject *jxl_decoder_proc(JxlDecoderObject *self, PyObject *unused) {
+    JxlDecoderStatus status = JxlDecoderProcessInput(self->decoder);
+    if (status == JXL_DEC_NEED_IMAGE_OUT_BUFFER) {
+        JxlPixelFormat format = {3, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
+        JxlImageOutCallback callback = (JxlImageOutCallback)&_jxl_decoder_dummy_callback;
+        JxlDecoderSetImageOutCallback(self->decoder, &format, callback, NULL);
+    } else if (status == JXL_DEC_BOX) {
+        JxlBoxType type;
+        JxlDecoderGetBoxType(self->decoder, type, 1);
+        return Py_BuildValue("iy#", (int)status, type, (Py_ssize_t)4);
+    }
+    return Py_BuildValue("i", (int)status);
+}
+*/
 
 void jxl_decoder_dealloc(JxlDecoderObject *self) {
     if (self->decoder) {
@@ -276,6 +305,7 @@ void jxl_decoder_dealloc(JxlDecoderObject *self) {
 static struct PyMethodDef jxl_decoder_methods[] = {
     {"get_info", (PyCFunction)jxl_decoder_get_info, METH_NOARGS, "Get basic JXL info"},
     {"get_icc_profile", (PyCFunction)jxl_decoder_get_icc_profile, METH_NOARGS, "Get Target ICC profile"},
+    /*{"proc", (PyCFunction)jxl_decoder_proc, METH_NOARGS, "return next event number"},*/
     {"next", (PyCFunction)jxl_decoder_next, METH_O, "Return next image frame data"},
     {"skip", (PyCFunction)jxl_decoder_skip, METH_O, "Skip requested number of frames"},
     {"rewind", (PyCFunction)jxl_decoder_rewind, METH_NOARGS, "Rewind to the first frame"},

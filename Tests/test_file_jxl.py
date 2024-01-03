@@ -88,11 +88,25 @@ def test_simple():
 
 
 def test_lossless_jpeg():
+    # returns the following events:
+    #  "JXL ", "ftyp", "jxlp", basic info, color, "jbrd", "jxlp", frame,
+    #  need buffer, full frame
     with Image.open("Tests/images/hopper.jpg.jxl") as im:
         assert im._type == "container"
         assert im.size == (128, 128)
         assert im.mode == "RGB"
         assert_image_similar_tofile(im, "Tests/images/hopper.jpg", 1.8)
+
+
+def test_exif():
+    # returns the following events:
+    #  "JXL ", "ftyp", "jxlp", basic info, color, "jbrd", "Exif", "xml ",
+    #  "jxlp", frame, need buffer, full frame
+    with Image.open("Tests/images/pil_sample_rgb.jxl") as im:
+        assert im._type == "container"
+        assert im.size == (100, 100)
+        assert im.mode == "RGB"
+        assert_image_similar_tofile(im, "Tests/images/pil_sample_rgb.jpg", 1.2)
 
 
 def test_animated():
