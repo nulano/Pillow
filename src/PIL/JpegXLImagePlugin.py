@@ -57,10 +57,21 @@ class JpegXLImageFile(ImageFile.ImageFile):
         icc_profile = self._decoder.get_icc_profile()
         if icc_profile:
             self.info["icc_profile"] = icc_profile
+        exif = self._get_boxes(b"Exif")
+        if exif:
+            self.info["exif"] = exif[0][4:]
+        xmp = self._get_boxes(b"xml ")
+        if xmp:
+            self.info["xmp"] = xmp[0]
 
         self._frame_info = None
         self._frame_current = 0
         self._frame_loaded = -1
+
+    def _get_boxes(self, box_type: bytes) -> list[bytes]:
+        if box_type not in self._basic_info["box_types"]:
+            return []
+        return self._decoder.get_boxes(box_type)
 
     def _seek(self, frame):
         if frame < self._decoder.frame_no:
@@ -86,6 +97,9 @@ class JpegXLImageFile(ImageFile.ImageFile):
         if not self._seek_check(frame):
             return
         self._frame_current = frame
+
+    def getxmp(self):
+        return self._getxmp(self.info["xmp"]) if "xmp" in self.info else {}
 
 
 Image.register_open(JpegXLImageFile.format, JpegXLImageFile, _accept)

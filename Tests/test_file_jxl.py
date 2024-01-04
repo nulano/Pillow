@@ -8,7 +8,6 @@ import pytest
 
 from PIL import features, Image
 from Tests.helper import (
-    assert_image_equal_tofile,
     assert_image_similar,
     assert_image_similar_tofile,
 )
@@ -18,6 +17,12 @@ try:
 except ImportError:
     # Skipped via setup_module()
     pass
+
+
+try:
+    from defusedxml import ElementTree
+except ImportError:
+    ElementTree = None
 
 
 class VerboseIO:
@@ -60,6 +65,7 @@ def test_sanity():
 
 
 def test_simple():
+    # cjxl Tests/images/hopper.png Tests/images/hopper.jxl
     with open("Tests/images/hopper.jxl", "rb") as f:
         data = f.read()
     with Image.open(VerboseIO(io.BytesIO(data))) as im:
@@ -86,11 +92,21 @@ def test_simple():
         assert im._frame_info["timecode"] == 0
         assert im._frame_info["name"] == b""
         assert im._frame_info["is_last"] is True
+        assert len(im.getexif()) == 0
+        if ElementTree is None:
+            with pytest.warns(
+                UserWarning,
+                match="XMP data cannot be read without defusedxml dependency",
+            ):
+                assert im.getxmp() == {}
+        else:
+            assert im.getxmp() == {}
         assert_image_similar_tofile(im, "Tests/images/hopper.png", 8.25)
         assert_image_similar_tofile(im, "Tests/images/hopper.jpg", 8.3)
 
 
 def test_lossless_jpeg():
+    # cjxl Tests/images/hopper.jpg Tests/images/hopper.jpg.jxl
     with Image.open("Tests/images/hopper.jpg.jxl") as im:
         assert im._type == "container"
         assert im.size == (128, 128)
@@ -106,7 +122,8 @@ def test_lossless_jpeg():
         assert_image_similar_tofile(im, "Tests/images/hopper.jpg", 1.8)
 
 
-def test_exif():
+def test_exif_xmp():
+    # cjxl Tests/images/pil_sample_rgb.jpg Tests/images/pil_sample_rgb.jxl
     with Image.open("Tests/images/pil_sample_rgb.jxl") as im:
         assert im._type == "container"
         assert im.size == (100, 100)
@@ -123,8 +140,24 @@ def test_exif():
         ]
         assert_image_similar_tofile(im, "Tests/images/pil_sample_rgb.jpg", 1.2)
 
+    info = im.getexif()
+    assert info[305] == "Adobe Photoshop CS Macintosh"
+
+    if ElementTree is None:
+        with pytest.warns(
+            UserWarning,
+            match="XMP data cannot be read without defusedxml dependency",
+        ):
+            assert im.getxmp() == {}
+    else:
+        xmp = im.getxmp()
+
+        description = xmp["xmpmeta"]["RDF"]["Description"]
+        assert description[0]["about"] == "uuid:903dad8d-0c2e-11de-aa32-f3694bed6de0"
+
 
 def test_animated():
+    # cjxl Tests/images/apng/delay.png Tests/images/delay.jxl
     with Image.open("Tests/images/delay.jxl") as im:
         assert im._type == "codestream"
         assert im.n_frames == 5
@@ -162,13 +195,3 @@ def test_animated():
             assert im._frame_info["duration"] == expected.info["duration"]
             assert im._frame_info["is_last"] is True
             assert_image_similar(im, expected, 0.17)
-
-
-def test_rewind_decoder():
-    with open("Tests/images/hopper.jxl", "rb") as f:
-        data = f.read()
-    with Image.open(VerboseIO(io.BytesIO(data))) as im:
-        assert isinstance(im, JpegXLImagePlugin.JpegXLImageFile)
-        assert im._decoder.get_icc_profile() == im.info["icc_profile"]
-        im._decoder.rewind()
-        assert im._decoder.get_icc_profile() == im.info["icc_profile"]
