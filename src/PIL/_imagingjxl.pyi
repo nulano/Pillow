@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, BinaryIO, TypedDict
+from typing import TypedDict
 
 class AnimationInfo(TypedDict):
     tps: tuple[int, int]

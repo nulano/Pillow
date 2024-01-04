@@ -51,7 +51,10 @@ class JpegXLImageFile(ImageFile.ImageFile):
             raise SyntaxError(msg)
 
         self.n_frames = self._basic_info["num_frames"]
-        self.is_animated = self._basic_info["animation_info"] is not None
+        animation_info = self._basic_info["animation_info"]
+        self.is_animated = animation_info is not None
+        if animation_info is not None:
+            self.info["loop"] = animation_info["num_loops"]
         self.tile = []
 
         icc_profile = self._decoder.get_icc_profile()

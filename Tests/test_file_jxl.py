@@ -161,6 +161,8 @@ def test_animated():
     with Image.open("Tests/images/delay.jxl") as im:
         assert im._type == "codestream"
         assert im.n_frames == 5
+        assert im.is_animated
+        assert im.info["loop"] == 0
         with Image.open("Tests/images/apng/delay.png") as expected:
             im.load()
             expected.load()
@@ -195,3 +197,10 @@ def test_animated():
             assert im._frame_info["duration"] == expected.info["duration"]
             assert im._frame_info["is_last"] is True
             assert_image_similar(im, expected, 0.17)
+
+
+@pytest.mark.xfail("fails")
+def test_num_plays():
+    # cjxl apng/num_plays_1.png num_plays_1.jxl
+    with Image.open("Tests/images/num_plays_1.jxl") as im:
+        assert im.info["loop"] == 1

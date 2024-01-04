@@ -142,7 +142,7 @@ PyObject *jxl_decoder_get_info(JxlDecoderObject *self, PyObject *Py_UNUSED(ignor
     }
 
     PyObject *animation_info;
-    if (info.have_preview) {
+    if (info.have_animation) {
         animation_info = Py_BuildValue("{s(II)sIsN}",
                 "tps", info.animation.tps_numerator, info.animation.tps_denominator,
                 "num_loops", info.animation.num_loops,
