@@ -569,7 +569,7 @@ class Image:
         # Instead of simply setting to None, we're setting up a
         # deferred error that will better explain that the core image
         # object is gone.
-        self.im = DeferredError(ValueError("Operation on closed image"))
+        self.im = DeferredError.new(ValueError("Operation on closed image"))
 
     def _copy(self):
         self.load()

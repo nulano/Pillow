@@ -210,6 +210,7 @@ PyObject *jxl_decoder_get_boxes(JxlDecoderObject *self, PyObject *req_type_obj) 
     while (status != JXL_DEC_SUCCESS) {
         status = JxlDecoderProcessInput(self->decoder);
         switch (status) {
+            /* TODO case JXL_DEC_BOX_NEED_MORE_OUTPUT: ... */
             case JXL_DEC_SUCCESS:
             case JXL_DEC_BOX:
                 if (box) {

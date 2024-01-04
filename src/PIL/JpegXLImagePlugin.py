@@ -10,7 +10,15 @@ except ImportError as ex:
 
 
 def _accept(prefix):
-    return len(prefix) >= 12 and _jxl.check_signature(prefix) is not None
+    is_valid = (
+        prefix[:2] == b"\xFF\x0A"
+        or prefix[:12] == b"\0\0\0\x0C\x4A\x58\x4C\x20\x0D\x0A\x87\x0A"
+    )
+    if is_valid and isinstance(_jxl, DeferredError):
+        return (
+            "image file could not be identified because JPEG XL support not installed"
+        )
+    return is_valid
 
 
 class JpegXLImageFile(ImageFile.ImageFile):
@@ -103,6 +111,10 @@ class JpegXLImageFile(ImageFile.ImageFile):
 
     def getxmp(self):
         return self._getxmp(self.info["xmp"]) if "xmp" in self.info else {}
+
+    def close(self):
+        super().close()
+        self._decoder = DeferredError.new(ValueError("Operation on closed image"))
 
 
 Image.register_open(JpegXLImageFile.format, JpegXLImageFile, _accept)

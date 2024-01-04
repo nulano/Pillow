@@ -213,3 +213,22 @@ def test_num_plays():
     # cjxl apng/num_plays_1.png num_plays_1.jxl
     with Image.open("Tests/images/num_plays_1.jxl") as im:
         assert im.info["loop"] == 1
+
+
+def test_close():
+    im = Image.open("Tests/images/hopper.jxl")
+    assert im.fp
+    im.close()
+    assert not im.fp
+    with pytest.raises(Exception):
+        im.load()
+
+
+@pytest.mark.skip("unclear if we want this")
+def test_exit():
+    # TODO should image be closed on __exit__?
+    with Image.open("Tests/images/hopper.jxl") as im:
+        assert im.fp
+    assert not im.fp
+    with pytest.raises(Exception):
+        im.load()
