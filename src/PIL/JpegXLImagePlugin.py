@@ -10,7 +10,7 @@ except ImportError as ex:
 
 
 def _accept(prefix):
-    return _jxl.check_signature(prefix) is not None
+    return len(prefix) >= 12 and _jxl.check_signature(prefix) is not None
 
 
 class JpegXLImageFile(ImageFile.ImageFile):
