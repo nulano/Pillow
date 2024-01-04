@@ -232,3 +232,12 @@ def test_exit():
     assert not im.fp
     with pytest.raises(Exception):
         im.load()
+
+
+def test_boxes_max_count():
+    with Image.open("Tests/images/pil_sample_rgb.jxl") as im:
+        assert len(im._decoder.get_boxes("jxlp", max_count=-1)) == 2
+        assert len(im._decoder.get_boxes("jxlp", max_count=0)) == 0
+        assert len(im._decoder.get_boxes("jxlp", max_count=1)) == 1
+        assert len(im._decoder.get_boxes("jxlp", max_count=2)) == 2
+        assert len(im._decoder.get_boxes("jxlp", max_count=3)) == 2

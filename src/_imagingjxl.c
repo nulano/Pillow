@@ -182,41 +182,67 @@ err:
     return NULL;
 }
 
-PyObject *jxl_decoder_get_boxes(JxlDecoderObject *self, PyObject *req_type_obj) {
+PyObject *jxl_decoder_get_boxes(JxlDecoderObject *self, PyObject *args, PyObject *kwargs) {
     const char *req_type;
     Py_ssize_t req_type_len;
-    if (PyBytes_AsStringAndSize(req_type_obj, &req_type, &req_type_len) < 0) {
-        goto err;
+    size_t max_count = (size_t)-1;
+    const Py_ssize_t chunk_size = 65536; /* TODO configurable chunk size? max size? */
+    PyObject *box = NULL;
+    PyObject *boxes = NULL;
+    Py_ssize_t offset = 0; /* how many bytes in box are valid */
+    static char *kwlist[] = {"type", "max_count", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|n:get_boxes", kwlist, &req_type, &req_type_len, &max_count)) {
+        return NULL;
     }
     if (req_type_len != sizeof(JxlBoxType)) {
-        PyErr_SetString(PyExc_ValueError, "expected bytes of length 4");
+        PyErr_SetString(PyExc_ValueError, "expected str or bytes of length 4");
         goto err;
     }
 
-    PyObject *boxes = PyList_New(0);
-    if (!boxes) {
+    if (!(boxes = PyList_New(0))) {
         return NULL;
+    }
+    if (max_count == 0) {
+        return boxes;
     }
 
     if (_jxl_decoder_reset(self, JXL_DEC_BOX)) {
         return NULL;
     }
 
-    PyObject *box = NULL;
-    const Py_ssize_t chunk_size = 65536; /* TODO configurable chunk size? max size? */
-    Py_ssize_t offset = 0;
-
     JxlDecoderStatus status = JXL_DEC_NEED_MORE_INPUT;
     while (status != JXL_DEC_SUCCESS) {
         status = JxlDecoderProcessInput(self->decoder);
         switch (status) {
-            /* TODO case JXL_DEC_BOX_NEED_MORE_OUTPUT: ... */
+            case JXL_DEC_BOX_NEED_MORE_OUTPUT:
+                if (box) {
+                    /* TODO prevent decompression bomb in this block */
+                    Py_ssize_t remaining = (Py_ssize_t)JxlDecoderReleaseBoxBuffer(self->decoder);
+                    Py_ssize_t size = PyBytes_GET_SIZE(box);
+                    if (remaining < 0 || remaining > size) {
+                        goto jxl_err;
+                    }
+                    offset = size - remaining;
+                    if (_PyBytes_Resize(&box, size + chunk_size) < 0) {
+                        goto err;
+                    }
+                    if (JxlDecoderSetBoxBuffer(self->decoder, PyBytes_AS_STRING(box) + offset, size + chunk_size - offset) != JXL_DEC_SUCCESS) {
+                        goto jxl_err;
+                    }
+                    break;
+                }
+            default:
+                PyErr_Format(PyExc_RuntimeError, "unexpected result from jxl decoder: %d", status);
+                goto err;
             case JXL_DEC_SUCCESS:
             case JXL_DEC_BOX:
                 if (box) {
-                    Py_ssize_t remaining = JxlDecoderReleaseBoxBuffer(self->decoder);
-                    Py_ssize_t newsize = PyBytes_GET_SIZE(box) - remaining;
-                    if (_PyBytes_Resize(&box, newsize) < 0) {
+                    Py_ssize_t remaining = (Py_ssize_t)JxlDecoderReleaseBoxBuffer(self->decoder);
+                    Py_ssize_t size = PyBytes_GET_SIZE(box);
+                    if (remaining < 0 || remaining > size) {
+                        goto jxl_err;
+                    }
+                    if (_PyBytes_Resize(&box, size - remaining) < 0) {
                         goto err;
                     }
                     if (PyList_Append(boxes, box) < 0) {
@@ -225,7 +251,7 @@ PyObject *jxl_decoder_get_boxes(JxlDecoderObject *self, PyObject *req_type_obj) 
                     Py_DECREF(box);
                     box = NULL;
                 }
-                if (status == JXL_DEC_BOX) {
+                if (status == JXL_DEC_BOX && (size_t)PyList_GET_SIZE(boxes) < max_count) {
                     JxlBoxType box_type;
                     if (JxlDecoderGetBoxType(self->decoder, box_type, JXL_TRUE) != JXL_DEC_SUCCESS) {
                         goto jxl_err;
@@ -241,9 +267,6 @@ PyObject *jxl_decoder_get_boxes(JxlDecoderObject *self, PyObject *req_type_obj) 
                     }
                 }
                 break;
-            default:
-                PyErr_Format(PyExc_RuntimeError, "unexpected result from jxl decoder: %d", status);
-                goto err;
         }
     }
 
@@ -440,7 +463,8 @@ void jxl_decoder_dealloc(JxlDecoderObject *self) {
 
 static struct PyMethodDef jxl_decoder_methods[] = {
     {"get_info", (PyCFunction)jxl_decoder_get_info, METH_NOARGS, "Get basic JXL info"},
-    {"get_boxes", (PyCFunction)jxl_decoder_get_boxes, METH_O, "Get data in boxes at requested positions"},
+    {"get_boxes", (PyCFunctionWithKeywords)jxl_decoder_get_boxes, METH_VARARGS | METH_KEYWORDS,
+        "Get data in boxes at requested positions"},
     {"get_icc_profile", (PyCFunction)jxl_decoder_get_icc_profile, METH_NOARGS, "Get Target ICC profile"},
     /*{"proc", (PyCFunction)jxl_decoder_proc, METH_NOARGS, "return next event number"},*/
     {"next", (PyCFunction)jxl_decoder_next, METH_O, "Return next image frame data"},
