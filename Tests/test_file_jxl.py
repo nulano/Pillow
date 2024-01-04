@@ -6,10 +6,11 @@ import re
 
 import pytest
 
-from PIL import features, Image
+from PIL import features, Image, ImageCms
 from Tests.helper import (
     assert_image_similar,
     assert_image_similar_tofile,
+    skip_unless_feature,
 )
 
 try:
@@ -156,6 +157,14 @@ def test_exif_xmp():
         assert description[0]["about"] == "uuid:903dad8d-0c2e-11de-aa32-f3694bed6de0"
 
 
+@skip_unless_feature("littlecms2")
+def test_load_icc_profile():
+    with Image.open("Tests/images/hopper.jxl") as im:
+        pass
+    profile = ImageCms.getOpenProfile(io.BytesIO(im.info["icc_profile"]))
+    assert profile.profile.profile_description == "RGB_D65_SRG_Rel_g0.45455"
+
+
 def test_animated():
     # cjxl Tests/images/apng/delay.png Tests/images/delay.jxl
     with Image.open("Tests/images/delay.jxl") as im:
@@ -199,7 +208,7 @@ def test_animated():
             assert_image_similar(im, expected, 0.17)
 
 
-@pytest.mark.xfail("fails")
+@pytest.mark.xfail(reason="failing")
 def test_num_plays():
     # cjxl apng/num_plays_1.png num_plays_1.jxl
     with Image.open("Tests/images/num_plays_1.jxl") as im:
