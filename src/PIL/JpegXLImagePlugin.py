@@ -48,14 +48,29 @@ class JpegXLImageFile(ImageFile.ImageFile):
             width, height = height, width
         self._size = (width, height)
 
+        bps = self._basic_info["bits_per_sample"]
+        num_channels = self._basic_info["num_color_channels"]
         have_alpha = self._basic_info["alpha_bits"] != 0
-        if self._basic_info["num_color_channels"] == 1:
-            # TODO check bit depth (image may be "I")
-            self._mode = "LA" if have_alpha else "L"
-        elif self._basic_info["num_color_channels"] == 3:
+        is_float = (
+            self._basic_info["exponent_bits_per_sample"] > 0
+            or self._basic_info["alpha_exponent_bits"] > 0
+        )
+        if num_channels == 1 and not have_alpha:
+            if is_float:
+                self._mode = "F"
+            elif bps > 8:
+                self._mode = "I;16"
+            else:
+                self._mode = "L"
+        elif bps > 8 or is_float:
+            msg = "image mode not supported"
+            raise SyntaxError(msg)
+        elif num_channels == 1:
+            self._mode = "LA"
+        elif num_channels == 3:
             self._mode = "RGBA" if have_alpha else "RGB"
         else:
-            msg = "cannot determine image mode"
+            msg = "image mode not supported"
             raise SyntaxError(msg)
 
         self.n_frames = self._basic_info["num_frames"]

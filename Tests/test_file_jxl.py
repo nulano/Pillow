@@ -8,8 +8,10 @@ import pytest
 
 from PIL import features, Image, ImageCms
 from Tests.helper import (
+    assert_image_equal,
     assert_image_similar,
     assert_image_similar_tofile,
+    hopper,
     skip_unless_feature,
 )
 
@@ -75,6 +77,11 @@ def test_simple():
         info = im._basic_info
         assert info["size"] == (128, 128)
         assert info["bits_per_sample"] == 8
+        assert info["exponent_bits_per_sample"] == 0
+        assert info["intensity_target"] == 255.0
+        assert info["min_nits"] == 0.0
+        assert info["relative_to_max_display"] is False
+        assert info["linear_below"] == 0.0
         assert info["uses_original_profile"] is False
         assert info["preview_size"] is None
         assert info["animation_info"] is None
@@ -82,6 +89,9 @@ def test_simple():
         assert info["num_color_channels"] == 3
         assert info["num_extra_channels"] == 0
         assert info["alpha_bits"] == 0
+        assert info["alpha_exponent_bits"] == 0
+        assert info["alpha_premultiplied"] == 0
+        assert info["intrinsic_size"] == (128, 128)
         assert info["num_frames"] == 1
         assert info["box_types"] == []
         assert im.size == (128, 128)
@@ -241,3 +251,19 @@ def test_boxes_max_count():
         assert len(im._decoder.get_boxes("jxlp", max_count=1)) == 1
         assert len(im._decoder.get_boxes("jxlp", max_count=2)) == 2
         assert len(im._decoder.get_boxes("jxlp", max_count=3)) == 2
+
+
+@pytest.mark.parametrize("mode", ["L", "LA", "RGB", "RGBA", "I;16", "F"])
+def test_modes(mode):
+    suffix = mode.replace(";", "")
+    prefix = f"Tests/images/hopper_{suffix}"
+
+    tgt = hopper(mode)
+    if "A" in mode:
+        tgt.putalpha(hopper("L").transpose(Image.Transpose.ROTATE_90))
+    if mode == "I;16":
+        tgt = tgt.point(lambda val: val * 64)
+
+    with Image.open(prefix + ".jxl") as im:
+        assert im.mode == mode
+        assert_image_equal(im, tgt)

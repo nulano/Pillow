@@ -8,8 +8,14 @@ class AnimationInfo(TypedDict):
     have_timecodes: bool
 
 class BasicInfo(TypedDict):
+    have_container: bool
     size: tuple[int, int]
     bits_per_sample: int
+    exponent_bits_per_sample: int
+    intensity_target: float
+    min_nits: float
+    relative_to_max_display: bool
+    linear_below: float
     uses_original_profile: bool
     preview_size: tuple[int, int] | None
     animation_info: AnimationInfo | None
@@ -17,6 +23,9 @@ class BasicInfo(TypedDict):
     num_color_channels: int
     num_extra_channels: int
     alpha_bits: int
+    alpha_exponent_bits: int
+    alpha_premultiplied: bool
+    intrinsic_size: tuple[int, int]
     num_frames: int
     box_types: list[bytes]
 

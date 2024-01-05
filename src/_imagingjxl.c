@@ -155,9 +155,15 @@ PyObject *jxl_decoder_get_info(JxlDecoderObject *self, PyObject *Py_UNUSED(ignor
         goto err;
     }
 
-    self->info = Py_BuildValue("{s(II)sIsNsNsNsisIsIsIsnsN}",
+    self->info = Py_BuildValue("{sNs(II)sIsIsfsfsNsfsNsNsNsisIsIsIsIsNs(II)snsN}",
+            "have_container", PyBool_FromLong(info.have_container),
             "size", info.xsize, info.ysize,
             "bits_per_sample", info.bits_per_sample,
+            "exponent_bits_per_sample", info.exponent_bits_per_sample,
+            "intensity_target", info.intensity_target,
+            "min_nits", info.min_nits,
+            "relative_to_max_display", PyBool_FromLong(info.relative_to_max_display),
+            "linear_below", info.linear_below,
             "uses_original_profile", PyBool_FromLong(info.uses_original_profile),
             "preview_size", preview_size,
             "animation_info", animation_info,
@@ -165,6 +171,9 @@ PyObject *jxl_decoder_get_info(JxlDecoderObject *self, PyObject *Py_UNUSED(ignor
             "num_color_channels", info.num_color_channels,
             "num_extra_channels", info.num_extra_channels,
             "alpha_bits", info.alpha_bits,
+            "alpha_exponent_bits", info.alpha_exponent_bits,
+            "alpha_premultiplied", PyBool_FromLong(info.alpha_premultiplied),
+            "intrinsic_size", info.intrinsic_xsize, info.intrinsic_ysize,
             "num_frames", num_frames,
             "box_types", box_types);
     if (!self->info) {
@@ -318,22 +327,55 @@ PyObject *jxl_decoder_get_icc_profile(JxlDecoderObject *self, PyObject *Py_UNUSE
     return icc_data;
 }
 
-void _jxl_decoder_image_out_callback_RGB(Imaging im, size_t x, size_t y, size_t num_pixels, const UINT8 *pixels) {
-    if (x >= im->xsize || y >= im->ysize) {
-        return;  /* TODO set error? */
+void _jxl_decoder_image_out_callback_L(Imaging im, size_t x, size_t y, size_t num_pixels, const UINT8 *pixels) {
+    if (x < im->xsize && y < im->ysize) {
+        if (num_pixels > im->xsize - x) {
+            num_pixels = im->xsize - x;
+        }
+        memcpy((UINT8 *)im->image8[y] + x, pixels, num_pixels);
     }
-    if (num_pixels >= im->xsize - x) {
-        num_pixels = im->xsize - x;
+}
+
+void _jxl_decoder_image_out_callback_LA(Imaging im, size_t x, size_t y, size_t num_pixels, const UINT8 *pixels) {
+    if (x < im->xsize && y < im->ysize) {
+        if (num_pixels > im->xsize - x) {
+            num_pixels = im->xsize - x;
+        }
+        size_t w = x + num_pixels;
+        UINT8 *target = (UINT8 *)im->image[y] + x * 4;
+        for (; x < w; x++) {
+            target[0] = target[1] = target[2] = pixels[0];
+            target[3] = pixels[1];
+            target += 4;
+            pixels += 2;
+        }
     }
-    size_t w = x + num_pixels;
-    UINT8 *row = (UINT8 *)im->image[y] + x * 4;
-    for (; x < w; x++) {
-        row[0] = pixels[0];
-        row[1] = pixels[1];
-        row[2] = pixels[2];
-        row[3] = 0xff;
-        row += 4;
-        pixels += 3;
+}
+
+void _jxl_decoder_image_out_callback_I16(Imaging im, size_t x, size_t y, size_t num_pixels, const UINT16 *pixels) {
+    if (x < im->xsize && y < im->ysize) {
+        if (num_pixels > im->xsize - x) {
+            num_pixels = im->xsize - x;
+        }
+        memcpy((UINT16 *)im->image[y] + x, pixels, num_pixels * 2);
+    }
+}
+
+void _jxl_decoder_image_out_callback_F(Imaging im, size_t x, size_t y, size_t num_pixels, const FLOAT32 *pixels) {
+    if (x < im->xsize && y < im->ysize) {
+        if (num_pixels > im->xsize - x) {
+            num_pixels = im->xsize - x;
+        }
+        memcpy((FLOAT32 *)im->image32[y] + x, pixels, num_pixels * 4);
+    }
+}
+
+void _jxl_decoder_image_out_callback_RGBA(Imaging im, size_t x, size_t y, size_t num_pixels, const UINT8 *pixels) {
+    if (x < im->xsize && y < im->ysize) {
+        if (num_pixels > im->xsize - x) {
+            num_pixels = im->xsize - x;
+        }
+        memcpy((UINT8 *)im->image[y] + x * 4, pixels, num_pixels * 4);
     }
 }
 
@@ -342,10 +384,29 @@ PyObject *jxl_decoder_next(JxlDecoderObject *self, PyObject *arg) {
     if (PyErr_Occurred()) {
         return NULL;
     }
+    Imaging im = (Imaging)id;
 
-    /* TODO figure out format and callback */
-    JxlPixelFormat format = {3, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
-    JxlImageOutCallback callback = (JxlImageOutCallback)&_jxl_decoder_image_out_callback_RGB;
+    /* supported modes: L, LA, I;16, F, RGB, RGBA */
+    JxlPixelFormat format = {1, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
+    JxlImageOutCallback callback;
+    if (!strcmp(im->mode, "L")) {
+        callback = (JxlImageOutCallback)_jxl_decoder_image_out_callback_L;
+    } else if (!strcmp(im->mode, "LA")) {
+        format.num_channels = 2;
+        callback = (JxlImageOutCallback)_jxl_decoder_image_out_callback_LA;
+    } else if (!strcmp(im->mode, "I;16")) {
+        format.data_type = JXL_TYPE_UINT16;
+        callback = (JxlImageOutCallback)_jxl_decoder_image_out_callback_I16;
+    } else if (!strcmp(im->mode, "F")) {
+        format.data_type = JXL_TYPE_FLOAT;
+        callback = (JxlImageOutCallback)_jxl_decoder_image_out_callback_F;
+    } else if (!strcmp(im->mode, "RGB") || !strcmp(im->mode, "RGBA")) {
+        format.num_channels = 4;  /* pad RGB with 0xff */
+        callback = (JxlImageOutCallback)_jxl_decoder_image_out_callback_RGBA;
+    } else {
+        PyErr_SetString(PyExc_ValueError, "image buffer mode not supported");
+        return NULL;
+    }
 
     JxlFrameHeader header;
     PyObject *frame_name = NULL;
