@@ -113,19 +113,11 @@ class PpmImageFile(ImageFile.ImageFile):
         if magic_number in (b"P1", b"P2", b"P3"):
             decoder_name = "ppm_plain"
         for ix in range(3):
-            if mode == "F" and ix == 2:
-                scale = float(self._read_token())
-                if not math.isfinite(scale) or scale == 0.0:
-                    msg = "scale must be finite and non-zero"
-                    raise ValueError(msg)
-                rawmode = "F;32F" if scale < 0 else "F;32BF"
-                self.info["scale"] = abs(scale)
-                continue
-            token = int(self._read_token())
+            token = self._read_token()
             if ix == 0:  # token is the x size
-                xsize = token
+                xsize = int(token)
             elif ix == 1:  # token is the y size
-                ysize = token
+                ysize = int(token)
                 if mode == "1":
                     self._mode = "1"
                     rawmode = "1;I"
@@ -133,19 +125,27 @@ class PpmImageFile(ImageFile.ImageFile):
                 else:
                     self._mode = rawmode = mode
             elif ix == 2:  # token is maxval
-                maxval = token
-                if not 0 < maxval < 65536:
-                    msg = "maxval must be greater than 0 and less than 65536"
-                    raise ValueError(msg)
-                if maxval > 255 and mode == "L":
-                    self._mode = "I"
+                if mode == "F":
+                    scale = float(token)
+                    if not math.isfinite(scale) or scale == 0.0:
+                        msg = "scale must be finite and non-zero"
+                        raise ValueError(msg)
+                    rawmode = "F;32F" if scale < 0 else "F;32BF"
+                    self.info["scale"] = abs(scale)
+                else:
+                    maxval = int(token)
+                    if not 0 < maxval < 65536:
+                        msg = "maxval must be greater than 0 and less than 65536"
+                        raise ValueError(msg)
+                    if maxval > 255 and mode == "L":
+                        self._mode = "I"
 
-                if decoder_name != "ppm_plain":
-                    # If maxval matches a bit depth, use the raw decoder directly
-                    if maxval == 65535 and mode == "L":
-                        rawmode = "I;16B"
-                    elif maxval != 255:
-                        decoder_name = "ppm"
+                    if decoder_name != "ppm_plain":
+                        # If maxval matches a bit depth, use the raw decoder directly
+                        if maxval == 65535 and mode == "L":
+                            rawmode = "I;16B"
+                        elif maxval != 255:
+                            decoder_name = "ppm"
 
         row_order = -1 if mode == "F" else 1
         args = (rawmode, 0, row_order) if decoder_name == "raw" else (rawmode, maxval)
