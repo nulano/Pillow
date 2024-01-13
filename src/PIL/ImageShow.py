@@ -19,14 +19,14 @@ import shutil
 import subprocess
 import sys
 from shlex import quote
-from typing import Any
+from typing import Any, Type
 
 from . import Image
 
 _viewers = []
 
 
-def register(viewer, order: int = 1) -> None:
+def register(viewer: Type[Viewer] | Viewer, order: int = 1) -> None:
     """
     The :py:func:`register` function is used to register additional viewers::
 
@@ -40,15 +40,16 @@ def register(viewer, order: int = 1) -> None:
         Zero or a negative integer to prepend this viewer to the list,
         a positive integer to append it.
     """
+    viewer_: Viewer = viewer  # type: ignore[assignment]
     try:
-        if issubclass(viewer, Viewer):
-            viewer = viewer()
+        if issubclass(viewer, Viewer):  # type: ignore[arg-type]
+            viewer_ = viewer()  # type: ignore[operator]
     except TypeError:
         pass  # raised if viewer wasn't a class
     if order > 0:
-        _viewers.append(viewer)
+        _viewers.append(viewer_)
     else:
-        _viewers.insert(0, viewer)
+        _viewers.insert(0, viewer_)
 
 
 def show(image: Image.Image, title: str | None = None, **options: Any) -> bool:
