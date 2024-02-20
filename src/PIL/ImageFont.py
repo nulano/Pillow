@@ -193,7 +193,7 @@ class FreeTypeFont:
 
     def __init__(
         self,
-        font: StrOrBytesPath | BinaryIO | None = None,
+        font: StrOrBytesPath | BinaryIO | None | int = None,
         size: float = 10,
         index: int = 0,
         encoding: str = "",
