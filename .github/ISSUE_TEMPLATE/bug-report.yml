@@ -58,10 +58,10 @@ body:
     attributes:
       label: How did you install Pillow?
       options:
-        - `pip install Pillow`
-        - `conda install Pillow`
-        - System package manager (e.g. `apt-get`, `yum`, ...)
-        - Built from source
+        - "`pip install Pillow`"
+        - "`conda install Pillow`"
+        - "System package manager (e.g. `apt-get`, `yum`, ...)"
+        - "Built from source"
       default: 0
     validations:
       required: true
