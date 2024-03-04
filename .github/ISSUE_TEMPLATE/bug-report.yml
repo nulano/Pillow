@@ -65,17 +65,16 @@ body:
         from PIL import features
         features.pilinfo(supported_formats=False)
       render: text
-  - type: markdown
-    attributes:
-      value: |
-        Please provide **code** that reproduces the issue and whenever possible, an **image** that demonstrates the issue. Please upload images to GitHub, not to third-party file hosting sites. If necessary, add the image to a zip or tar archive.
-
-        The best reproductions are self-contained scripts with minimal dependencies. If you are using a framework such as Plone, Django, or Buildout, try to replicate the issue just using Pillow.
   - type: textarea
     attributes:
       label: Additional information
-  - type: textarea
-    attributes:
-      label: Code to reproduce the issue
-      placeholder: Python code goes here
-      render: python
+      description: |
+        Please provide **code** that reproduces the issue and whenever possible, an **image** that demonstrates the issue. Please upload images to GitHub, not to third-party file hosting sites. If necessary, add the image to a zip or tar archive.
+
+        The best reproductions are self-contained scripts with minimal dependencies. If you are using a framework such as Plone, Django, or Buildout, try to replicate the issue just using Pillow.
+      value: |
+
+
+        ```python
+        <Python code goes here>
+        ```
