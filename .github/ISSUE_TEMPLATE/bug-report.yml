@@ -29,15 +29,28 @@ body:
   - type: textarea
     attributes:
       label: What did you do?
+      description: |
+        Please provide **code** that reproduces the issue and whenever possible, an **image** that demonstrates the issue. Please upload images to GitHub, not to third-party file hosting sites. If necessary, add the image to a zip or tar archive.
+
+        The best reproductions are self-contained scripts with minimal dependencies. If you are using a framework such as Plone, Django, or Buildout, try to replicate the issue just using Pillow.
       placeholder: Please describe the steps to reproduce the issue.
     validations:
       required: true
   - type: textarea
     attributes:
+      label: Code to reproduce the issue
+      placeholder: Python code goes here
+      render: python
+  - type: textarea
+    attributes:
       label: What did you expect to happen?
+    validations:
+      required: true
   - type: textarea
     attributes:
       label: What actually happened?
+    validations:
+      required: true
   - type: textarea
     attributes:
       label: What are your OS, Python and Pillow versions?
@@ -58,8 +71,6 @@ body:
         - "conda"
         - "System package manager (e.g. apt-get, yum, ...)"
         - "Built from source"
-        - "other"
-      default: 0
     validations:
       required: true
   - type: textarea
@@ -75,12 +86,3 @@ body:
   - type: textarea
     attributes:
       label: Additional information
-      description: |
-        Please include **code** that reproduces the issue and whenever possible, an **image** that demonstrates the issue. Please upload images to GitHub, not to third-party file hosting sites. If necessary, add the image to a zip or tar archive.
-
-        The best reproductions are self-contained scripts with minimal dependencies. If you are using a framework such as Plone, Django, or Buildout, try to replicate the issue just using Pillow.
-  - type: textarea
-    attributes:
-      label: Code to reproduce the issue
-      placeholder: code goes here
-      render: python
