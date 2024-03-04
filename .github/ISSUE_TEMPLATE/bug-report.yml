@@ -27,8 +27,8 @@ body:
 
         Thank you.
 
-        [python-imaging-library tag](https://stackoverflow.com/questions/tagged/python-imaging-library)
-        [Guidelines on how to provide a good bug report](https://stackoverflow.com/help/mcve)
+        [python-imaging-library tag]: https://stackoverflow.com/questions/tagged/python-imaging-library
+        [Guidelines on how to provide a good bug report]: https://stackoverflow.com/help/mcve
   - type: textarea
     attributes:
       label: What did you do?
@@ -71,9 +71,9 @@ body:
       placeholder: |
         Please paste here the output of running `python3 -m PIL --report`,
         or the output of the following Python code:
-
         from PIL import features
         features.pilinfo(supported_formats=False)
+      render: text
   - type: textarea
     attributes:
       label: Additional information
