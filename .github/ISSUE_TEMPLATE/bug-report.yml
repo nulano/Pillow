@@ -9,22 +9,19 @@ body:
 
         If you have a ...
 
-        1.  General question: consider asking the question on Stack Overflow
-            with the [python-imaging-library tag].
+        1.  General question: consider asking the question on Stack Overflow with the [python-imaging-library tag].
 
             Do not ask a question in both places.
 
-            If you think you have found a bug or have an unexplained exception
-            then file a bug report here.
+            If you think you have found a bug or have an unexplained exception then file a bug report here.
 
-        2.  Bug report: include a self-contained, copy-pastable example that
-            generates the issue if possible. Be concise with code posted.
+        2.  Bug report: include a self-contained, copy-pasteable example that generates the issue if possible. Be concise with code posted.
+
             [Guidelines on how to provide a good bug report].
-            Bug reports which follow these guidelines are easier to diagnose,
-            and are often handled much more quickly.
+
+            Bug reports which follow these guidelines are easier to diagnose, and are often handled much more quickly.
 
         We know asking good questions takes effort, and we appreciate your time.
-
         Thank you.
 
         [python-imaging-library tag]: https://stackoverflow.com/questions/tagged/python-imaging-library
@@ -32,8 +29,7 @@ body:
   - type: textarea
     attributes:
       label: What did you do?
-      description: Please describe the steps to reproduce the issue.
-      placeholder: placeholder...
+      placeholder: Please describe the steps to reproduce the issue.
     validations:
       required: true
   - type: textarea
@@ -58,10 +54,11 @@ body:
     attributes:
       label: How did you install Pillow?
       options:
-        - "`pip install Pillow`"
-        - "`conda install Pillow`"
-        - "System package manager (e.g. `apt-get`, `yum`, ...)"
+        - "pip"
+        - "conda"
+        - "System package manager (e.g. apt-get, yum, ...)"
         - "Built from source"
+        - "other"
       default: 0
     validations:
       required: true
@@ -71,19 +68,19 @@ body:
       placeholder: |
         Please paste here the output of running `python3 -m PIL --report`,
         or the output of the following Python code:
+
         from PIL import features
         features.pilinfo(supported_formats=False)
       render: text
   - type: textarea
     attributes:
       label: Additional information
-      value: |
-        <!--
+      description: |
         Please include **code** that reproduces the issue and whenever possible, an **image** that demonstrates the issue. Please upload images to GitHub, not to third-party file hosting sites. If necessary, add the image to a zip or tar archive.
 
         The best reproductions are self-contained scripts with minimal dependencies. If you are using a framework such as Plone, Django, or Buildout, try to replicate the issue just using Pillow.
-        -->
-
-        ```python
-        code goes here
-        ```
+  - type: textarea
+    attributes:
+      label: Code to reproduce the issue
+      placeholder: code goes here
+      render: python
