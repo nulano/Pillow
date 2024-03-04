@@ -54,25 +54,16 @@ body:
   - type: textarea
     attributes:
       label: What are your OS, Python and Pillow versions?
-      value: |
+      placeholder: |
         * OS:
         * Python:
         * Pillow:
+    validations:
+      required: true
   - type: input
     attributes:
-      label: What is your operating system?
-    validations:
-      required: true
-  - type: dropdown
-    attributes:
       label: How did you install Pillow?
-      options:
-        - "pip"
-        - "conda"
-        - "System package manager (e.g. apt-get, yum, ...)"
-        - "Built from source"
-    validations:
-      required: true
+      placeholder: "Examples: pip, conda, apt-get, built from source"
   - type: textarea
     attributes:
       label: What is the output of running `python3 -m PIL --report`?
