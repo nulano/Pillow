@@ -55,9 +55,9 @@ class Stat:
                 self.h = image_or_list.histogram(mask)
             else:
                 self.h = image_or_list.histogram()
-        else:
+        elif isinstance(image_or_list, list):
             self.h = image_or_list
-        if not isinstance(self.h, list):
+        else:
             msg = "first argument must be image or list"  # type: ignore[unreachable]
             raise TypeError(msg)
         self.bands = list(range(len(self.h) // 256))
